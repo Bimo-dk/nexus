@@ -1,0 +1,59 @@
+{
+  "name": "nexus",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Nexus — Angular 19 micro frontend platform (bygget oven on Native Federation)",
+  "scripts": {
+    "build:all": "docker compose build",
+    "up": "docker compose up",
+    "up:build": "docker compose up --build",
+    "up:detached": "docker compose up -d",
+    "up:dev": "docker compose -f docker-compose.dev.yml up",
+    "down": "docker compose down",
+    "down:volumes": "docker compose down -v",
+    "logs": "docker compose logs -f",
+    "ps": "docker compose ps",
+    "health": "curl -s http://localhost:3000/health",
+
+    "tools:install": "cd nexus-tools && npm install && npm run build && cd ../dev-tools && npm install",
+    "tools:build": "cd nexus-tools && npm run build",
+
+    "nexus:new": "cd nexus-tools && npx -y -p @angular-devkit/schematics-cli@latest schematics ./schematics/collection.json:generate-remote --dry-run=false",
+
+    "dev:proxy": "cd dev-tools && npm start",
+    "dev:remote-one": "node dev-tools/switch-local.mjs remoteOne 8666 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd remote-one && npm start\" \"npm run dev:proxy\"",
+    "dev:remote-two": "node dev-tools/switch-local.mjs remoteTwo 8671 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd remote-two && npm start\" \"npm run dev:proxy\"",
+
+    "docs:install": "npm install --legacy-peer-deps",
+    "docs:start": "docusaurus start",
+    "docs:build": "docusaurus build",
+    "docs:serve": "docusaurus serve",
+    "docs:clear": "docusaurus clear",
+    "docs:deploy": "docusaurus deploy",
+    "docs:typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.6.0",
+    "@docusaurus/preset-classic": "^3.6.0",
+    "@mdx-js/react": "^3.0.0",
+    "clsx": "^2.1.1",
+    "prism-react-renderer": "^2.4.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "^3.6.0",
+    "@docusaurus/tsconfig": "^3.6.0",
+    "@docusaurus/types": "^3.6.0",
+    "@types/react": "^18.3.0",
+    "typescript": "~5.6.3"
+  },
+  "browserslist": {
+    "production": [">0.5%", "not dead", "not op_mini all"],
+    "development": ["last 3 chrome version", "last 3 firefox version", "last 5 safari version"]
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  }
+}
