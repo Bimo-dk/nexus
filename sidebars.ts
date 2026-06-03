@@ -8,6 +8,7 @@ const sidebars: SidebarsConfig = {
       label: 'Getting started',
       collapsed: false,
       items: [
+        'getting-started/why-nexus',
         'getting-started/overview',
         'getting-started/installation',
         'getting-started/architecture',
@@ -38,6 +39,8 @@ const sidebars: SidebarsConfig = {
         'workflows/zero-downtime',
         'workflows/deploy',
         'workflows/example-playground',
+        'workflows/component-catalog',
+        'workflows/loading-patterns',
       ],
     },
   ],

@@ -14,8 +14,8 @@ Seven npm packages published from the [`nexus-packages`](https://github.com/Bimo
 |---|---|
 | [`@bimo-dk/nexus-core`](nexus-core.md) | TypeScript types + constants + validators. Zero runtime deps. |
 | [`@bimo-dk/nexus-client`](nexus-client.md) | `RegistryClient` (HTTP) + `RegistryWebSocket` (WS). |
-| [`@bimo-dk/nexus-build`](nexus-build.md) | `@NexusRemote` decorator + `nexus-build` CLI — generates `federation.config.json` automatically. |
-| [`@bimo-dk/nexus-runtime`](nexus-runtime.md) | Angular providers — `provideNexusHost`, `provideNexusRemote`. |
+| [`@bimo-dk/nexus-build`](nexus-build.md) | `@NexusRemote` + `@NexusComponent` decorators + `nexus-build` CLI — generates `federation.config.json` and `catalog.json`. |
+| [`@bimo-dk/nexus-runtime`](nexus-runtime.md) | Angular providers — `provideNexusHost`, `provideNexusRemote` — plus `<nexus-component>` tag, `nexusRoute()`, `ComponentLoaderService`, `CatalogService`. |
 | [`@bimo-dk/nexus-ui`](nexus-ui.md) | Angular Material component library — health badge, offline banner, status card. |
 | [`@bimo-dk/nexus-testing`](nexus-testing.md) | `MockRegistryServer` + mock factories. devDependency only. |
 | [`@bimo-dk/nexus-cli`](nexus-cli.md) | `bnx` CLI — generate, publish, status, health, dev. |

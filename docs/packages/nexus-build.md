@@ -124,6 +124,102 @@ console.log(result.diff);   // before/after, useful in CI
 - Two decorators with different names but same `exposeAs` → error.
 - `shared` already present in `federation.config.json` → preserved unless overridden via the API call's options.
 
+## `@NexusComponent` — catalog metadata
+
+A second decorator that ships in the same package. Stack it on the same class as `@NexusRemote()`:
+
+```ts
+import { NexusRemote, NexusComponent } from '@bimo-dk/nexus-build';
+
+@NexusRemote({ exposeAs: 'OrderTable' })
+@NexusComponent({
+  title: 'Order Table',
+  description: 'Paginated table of orders with status filter',
+  category: 'data-display',
+  tags: ['orders', 'commerce', 'table'],
+  icon: 'shopping_cart',
+  inputs: {
+    filter:   { type: 'string',  default: 'all',    enum: ['all','open','closed'] },
+    pageSize: { type: 'number',  default: 25 },
+    readonly: { type: 'boolean', default: false },
+  },
+  experimental: false,
+})
+@Component({ /* ... */ })
+export default class OrderTableComponent {}
+```
+
+The two decorators serve different purposes:
+
+| Decorator | Produces | Read by |
+|---|---|---|
+| `@NexusRemote()` | `federation.config.json` entry under `exposes` | Native Federation at build time |
+| `@NexusComponent({...})` | `catalog.json` entry | Portal `/catalog` page, `CatalogService`, IDEs |
+
+You can use either independently — `@NexusComponent` without `@NexusRemote` produces a catalog entry but no federation exposure (useful for non-federated documentation), and vice versa.
+
+### `NexusComponentOptions`
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `title` | `string` | yes | Display name in the catalog UI |
+| `description` | `string` | no | One-line description |
+| `category` | `string` | no | Free-form grouping. Convention: `data-display`, `input`, `navigation`, `layout`, `feedback`, `chart` |
+| `tags` | `string[]` | no | Free-form, used for filter/search |
+| `icon` | `string` | no | Material icon name or single emoji |
+| `inputs` | `Record<string, NexusInputSpec>` | no | Schema of `@Input()` the component accepts |
+| `experimental` | `boolean` | no | If true, hidden from the default catalog view |
+
+### `NexusInputSpec`
+
+```ts
+interface NexusInputSpec {
+  type: 'string' | 'number' | 'boolean' | 'object' | 'array';
+  default?: unknown;
+  description?: string;
+  required?: boolean;
+  enum?: string[];          // for string inputs
+}
+```
+
+### Generated `catalog.json`
+
+```jsonc
+// public/catalog.json — written next to federation.config.json
+{
+  "remote": "orders",
+  "generatedAt": "2026-06-03T10:15:00.000Z",
+  "entries": [
+    {
+      "expose": "OrderTable",
+      "className": "OrderTableComponent",
+      "title": "Order Table",
+      "description": "Paginated table of orders with status filter",
+      "category": "data-display",
+      "tags": ["orders", "commerce", "table"],
+      "icon": "shopping_cart",
+      "inputs": { /* spec mirror */ },
+      "experimental": false
+    }
+  ]
+}
+```
+
+The file is placed in `public/` so the remote's nginx serves it from `/catalog.json`. Override the path with `nexus-build --catalog-path <path>` if your build copies `public/` differently.
+
+### Reading the metadata at runtime
+
+```ts
+import { getNexusComponentMetadata } from '@bimo-dk/nexus-build';
+
+const meta = getNexusComponentMetadata(OrderTableComponent);
+// { title: 'Order Table', tags: [...], inputs: {...}, ... }
+```
+
+The decorator stores the options via `Symbol.for('nexus.component')` so other packages can introspect a component class at runtime without re-importing the scanner.
+
+See [component catalog](../workflows/component-catalog.md) for the full end-to-end story.
+
 ## Why `federation.config.js` stays
 
 `federation.config.js` is Native Federation library convention. The CLI does not rewrite it; it rewrites the JSON the JS file requires:
