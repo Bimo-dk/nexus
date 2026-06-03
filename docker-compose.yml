@@ -116,7 +116,7 @@ services:
       context: ../nexus-portal
       args:
         NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
-        GITHUB_TOKEN: ${GITHUB_TOKEN}
+        NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN}
     image: nexus-portal:latest
     container_name: nexus-portal
     ports:
