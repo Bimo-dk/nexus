@@ -1,5 +1,5 @@
 {
-  "$comment": "Nexus developer proxy konfiguration. 'local' = remotes der køres lokalt med hot reload. 'remote' = delt staging-miljø der bruges til alt andet.",
+  "$comment": "Nexus developer proxy konfiguration. 'local' = remotes der runes lokalt med hot reload. 'remote' = delt staging-miljoe der bruges til alt andet.",
   "proxyPort": 9000,
   "local": {
     "remoteOne": 8666

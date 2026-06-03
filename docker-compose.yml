@@ -3,13 +3,13 @@ name: nexus
 # ============================================================================
 # Bimo-Nexus full-stack orchestrator
 #
-# Hver service har sit eget repo:
+# Each service has its own repo:
 #   ../nexus-registry, ../nexus-host-template, ../nexus-gateway,
 #   ../nexus-portal, ../nexus-example, ../nexus-proxy, ../nexus-remote-templat
 # ============================================================================
 
 services:
-  # ===== INTERNE SERVICES (ingen public port-mapping) =====
+  # ===== INTERNAL SERVICES (no public port mapping) =====
   registry:
     build:
       context: ../nexus-registry
@@ -94,7 +94,7 @@ services:
     image: nexus-gateway:latest
     container_name: nexus-gateway
     environment:
-      # Runtime config — substitueres ind i /assets/config.json ved container-start
+      # Runtime config — substituted into /assets/config.json at container start
       HOST_REMOTE_ENTRY: ${HOST_REMOTE_ENTRY:-/host/remoteEntry.json}
       HOST_EXPOSED_MODULE: ${HOST_EXPOSED_MODULE:-./AppShell}
     ports:
