@@ -5,9 +5,13 @@ slug: /
 sidebar_position: 1
 ---
 
-# Bimo-Nexus
+# Nexus
 
-**Bimo-Nexus** is an Angular 19 micro frontend platform built on top of [Native Federation](https://www.npmjs.com/package/@angular-architects/native-federation). It gives a complete production stack — gateway, host shell, registry, admin portal, dev proxy and a polished package ecosystem — so a team can ship independent remotes with zero downtime.
+> **An open-source Angular micro frontend platform — developed by Bimo.**
+
+**Nexus** is an Angular 19 micro frontend platform built on top of [Native Federation](https://www.npmjs.com/package/@angular-architects/native-federation). It gives a complete production stack — gateway, host shell, registry, admin portal, dev proxy and a polished package ecosystem — so a team can ship independent remotes with zero downtime.
+
+It is free, MIT-licensed, and developed in the open by Bimo. Contributions, issues and feedback are welcome — see the GitHub repository linked in the navigation.
 
 ```
         Browser
@@ -45,7 +49,7 @@ sidebar_position: 1
 | **Remote template** | Starter app cloned by `bnx generate remote` | [`nexus-remote-templat`](services/remotes.md) |
 | **Dev proxy** | Local hot-reload proxy that lets you run one remote against staging | [`nexus-proxy`](services/proxy.md) |
 | **Base image** | Shared Docker base for all services | [`nexus-base-image`](services/base-image.md) |
-| **Packages** | 7 published `@bimo-dk/*` packages (core, client, build, runtime, ui, testing, cli) | [`nexus-packages`](packages/overview.md) |
+| **Packages** | 7 published packages (core, client, build, runtime, ui, testing, cli) | [`nexus-packages`](packages/overview.md) |
 | **Example** | Editable playground that composes the whole stack | [`nexus-example`](workflows/example-playground.md) |
 
 ## When you should use it

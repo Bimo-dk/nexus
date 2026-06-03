@@ -1,8 +1,12 @@
-# Bimo-Nexus
+# Nexus
 
-**Angular 19 micro frontend platform on top of Native Federation.** Gateway, host shell, registry with WebSocket broadcast, admin portal, dev proxy, and a 7-package ecosystem.
+> **An open-source Angular micro frontend platform — developed by Bimo.**
 
-> 📚 **Documentation**: [bimo-dk.github.io/nexus](https://bimo-dk.github.io/nexus/) — the site is built from [`docs/`](./docs/) and deployed automatically on every push to `main`.
+**Nexus** is an Angular 19 micro frontend platform on top of Native Federation. It bundles a gateway, a host shell, a registry with WebSocket broadcast, an admin portal, a dev proxy, and a 7-package ecosystem so a team can ship independent remotes with zero downtime.
+
+MIT-licensed. Free to use, free to fork, contributions welcome.
+
+> 📚 **Documentation site:** generated from [`docs/`](./docs/) and deployed to GitHub Pages by [`.github/workflows/deploy-docs.yml`](./.github/workflows/deploy-docs.yml) on every push to `main`.
 
 ## Quick start
 
@@ -37,6 +41,17 @@ npm run docs:start
 # → http://localhost:3000
 ```
 
+## GitHub Pages deployment
+
+The site is built and deployed automatically by the workflow at `.github/workflows/deploy-docs.yml`:
+
+1. Enable Pages on the repo: **Settings → Pages → Source: GitHub Actions**.
+2. Push to `main` — the workflow builds Docusaurus and deploys to GitHub Pages.
+
+The workflow auto-detects the GitHub org and repo name (`${{ github.repository_owner }}` and `${{ github.event.repository.name }}`), so no config edit is needed if you fork or rename the repo.
+
+For local docs builds outside GitHub Actions, optionally set `GITHUB_ORG` and `GITHUB_REPO` env-vars (defaults to placeholders).
+
 ## Layout
 
 ```
@@ -57,6 +72,10 @@ nexus-packages/               # @bimo-dk/* monorepo (Turbo + Changesets)
 nexus-example/                # runnable demo orchestrator
 ```
 
+## About
+
+Nexus is an open-source project developed and maintained by **Bimo**. Built to give multi-team Angular products an honest path to micro frontends — no proprietary runtime, no lock-in, just sensible defaults on top of an ESM federation spec.
+
 ## License
 
-See [LICENSE](./LICENSE).
+MIT — see [LICENSE](./LICENSE).

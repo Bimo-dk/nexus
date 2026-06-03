@@ -42,6 +42,9 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build Docusaurus site
+        env:
+          GITHUB_ORG: ${{ github.repository_owner }}
+          GITHUB_REPO: ${{ github.event.repository.name }}
         run: npm run docs:build
 
       - name: Upload artifact
