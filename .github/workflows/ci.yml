@@ -1,0 +1,18 @@
+name: Validate orchestrator
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate-compose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker-compose syntax
+        run: docker compose -f docker-compose.yml config > /dev/null
+      - name: Validate docker-compose.dev syntax
+        if: hashFiles('docker-compose.dev.yml') != ''
+        run: docker compose -f docker-compose.dev.yml config > /dev/null

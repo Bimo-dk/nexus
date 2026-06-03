@@ -1,0 +1,137 @@
+name: nexus
+
+# ============================================================================
+# Bimo-Nexus full-stack orchestrator
+#
+# Hver service har sit eget repo (../nexus-registry, ../host-template, ...).
+# Build-context = projekt-rod (..) for at @bimo-nexus/* file: deps fra
+# ../nexus-packages er tilgængelige under npm install.
+# ============================================================================
+
+services:
+  # ===== INTERNE SERVICES (ingen public port-mapping) =====
+  registry:
+    build:
+      context: ..
+      dockerfile: nexus-registry/Dockerfile
+    image: nexus-registry:latest
+    container_name: nexus-registry
+    expose:
+      - "3000"
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
+    volumes:
+      - registry-data:/app/data
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+  remote-one:
+    build:
+      context: ..
+      dockerfile: nexus-example/remote-one/Dockerfile
+    image: nexus-remote-one:latest
+    container_name: nexus-remote-one
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+  remote-two:
+    build:
+      context: ..
+      dockerfile: nexus-example/remote-two/Dockerfile
+    image: nexus-remote-two:latest
+    container_name: nexus-remote-two
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+  host:
+    build:
+      context: ..
+      dockerfile: host-template/Dockerfile
+      args:
+        NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+    image: nexus-host:latest
+    container_name: nexus-host
+    expose:
+      - "80"
+    depends_on:
+      registry:
+        condition: service_healthy
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+  # ===== PUBLIC SERVICES =====
+  app:
+    build:
+      context: ..
+      dockerfile: app-template/Dockerfile
+      args:
+        NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+        HOST_REMOTE_ENTRY: ${HOST_REMOTE_ENTRY:-/host/remoteEntry.json}
+    image: nexus-app:latest
+    container_name: nexus-app
+    ports:
+      - "8668:80"
+    depends_on:
+      registry:
+        condition: service_healthy
+      host:
+        condition: service_started
+      remote-one:
+        condition: service_started
+      remote-two:
+        condition: service_started
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+  manager:
+    build:
+      context: ..
+      dockerfile: nexus-portal/Dockerfile
+      args:
+        NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+    image: nexus-portal:latest
+    container_name: nexus-portal
+    ports:
+      - "8669:80"
+    depends_on:
+      registry:
+        condition: service_healthy
+    networks:
+      - nexus-net
+    restart: unless-stopped
+
+volumes:
+  registry-data:
+    driver: local
+
+networks:
+  nexus-net:
+    driver: bridge

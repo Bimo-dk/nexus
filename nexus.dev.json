@@ -1,0 +1,12 @@
+{
+  "$comment": "Nexus developer proxy konfiguration. 'local' = remotes der køres lokalt med hot reload. 'remote' = delt staging-miljø der bruges til alt andet.",
+  "proxyPort": 9000,
+  "local": {
+    "remoteOne": 8666
+  },
+  "remote": {
+    "url": "http://localhost:8668",
+    "registryApiPath": "/api"
+  },
+  "logRouting": true
+}
