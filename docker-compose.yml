@@ -3,17 +3,18 @@ name: nexus
 # ============================================================================
 # Bimo-Nexus full-stack orchestrator
 #
-# Hver service har sit eget repo (../nexus-registry, ../host-template, ...).
-# Build-context = projekt-rod (..) for at @bimo-nexus/* file: deps fra
-# ../nexus-packages er tilgængelige under npm install.
+# Hver service har sit eget repo:
+#   ../nexus-registry, ../nexus-host-template, ../nexus-gateway,
+#   ../nexus-portal, ../nexus-example, ../nexus-proxy, ../nexus-remote-templat
 # ============================================================================
 
 services:
   # ===== INTERNE SERVICES (ingen public port-mapping) =====
   registry:
     build:
-      context: ..
-      dockerfile: nexus-registry/Dockerfile
+      context: ../nexus-registry
+      args:
+        NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN}
     image: nexus-registry:latest
     container_name: nexus-registry
     expose:
@@ -37,8 +38,7 @@ services:
 
   remote-one:
     build:
-      context: ..
-      dockerfile: nexus-example/remote-one/Dockerfile
+      context: ../nexus-example/remote-one
     image: nexus-remote-one:latest
     container_name: nexus-remote-one
     expose:
@@ -54,8 +54,7 @@ services:
 
   remote-two:
     build:
-      context: ..
-      dockerfile: nexus-example/remote-two/Dockerfile
+      context: ../nexus-example/remote-two
     image: nexus-remote-two:latest
     container_name: nexus-remote-two
     expose:
@@ -71,10 +70,10 @@ services:
 
   host:
     build:
-      context: ..
-      dockerfile: host-template/Dockerfile
+      context: ../nexus-host-template
       args:
         NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+        NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN}
     image: nexus-host:latest
     container_name: nexus-host
     expose:
@@ -87,15 +86,17 @@ services:
     restart: unless-stopped
 
   # ===== PUBLIC SERVICES =====
-  app:
+  gateway:
     build:
-      context: ..
-      dockerfile: app-template/Dockerfile
+      context: ../nexus-gateway
       args:
         NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
-        HOST_REMOTE_ENTRY: ${HOST_REMOTE_ENTRY:-/host/remoteEntry.json}
-    image: nexus-app:latest
-    container_name: nexus-app
+    image: nexus-gateway:latest
+    container_name: nexus-gateway
+    environment:
+      # Runtime config — substitueres ind i /assets/config.json ved container-start
+      HOST_REMOTE_ENTRY: ${HOST_REMOTE_ENTRY:-/host/remoteEntry.json}
+      HOST_EXPOSED_MODULE: ${HOST_EXPOSED_MODULE:-./AppShell}
     ports:
       - "8668:80"
     depends_on:
@@ -111,7 +112,7 @@ services:
       - nexus-net
     restart: unless-stopped
 
-  manager:
+  portal:
     build:
       context: ../nexus-portal
       args:
