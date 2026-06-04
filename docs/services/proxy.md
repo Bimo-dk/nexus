@@ -32,17 +32,19 @@ You see the entire app, but only your remote is local.
 ## How it works
 
 ```
-browser ──────► localhost:9000 (proxy)
+browser ──────► localhost:9000 (dev proxy)
                   │
-   /remotes/remoteOne/* ──► localhost:8666  (your ng serve, with HMR)
-   /remotes/remoteTwo/* ──► <shared env>
-   /host/*              ──► <shared env>
-   /api/*               ──► <shared env>
-   /ws                  ──► <shared env>  (websocket upgrade)
-   everything else      ──► <shared env>
+   /remotes/catalog/* ──► localhost:8700  (your local ng serve, HMR)
+   /remotes/*/         ──► <shared env>   (all other remotes, auto-discovered)
+   /host/*             ──► <shared env>
+   /api/*              ──► <shared env>
+   /ws                 ──► <shared env>   (websocket upgrade)
+   everything else     ──► <shared env>
 ```
 
 The proxy is a small Express server using `http-proxy-middleware`. It reads `nexus.dev.json`, maps every `local` remote to a local port, and forwards everything else to `remote.url`.
+
+The proxy fetches the remote list from the registry at startup and creates routes for all enabled remotes. Only the ones listed in `local` are intercepted to your machine — everything else forwards to the shared env.
 
 ## Configuration — `nexus.dev.json`
 
@@ -50,7 +52,7 @@ The proxy is a small Express server using `http-proxy-middleware`. It reads `nex
 {
   "proxyPort": 9000,
   "local": {
-    "remoteOne": 8666
+    "catalog": 8700
   },
   "remote": {
     "url": "http://localhost:8668"
@@ -58,6 +60,8 @@ The proxy is a small Express server using `http-proxy-middleware`. It reads `nex
   "logRouting": true
 }
 ```
+
+Only list the remote you are actively developing in `local`. All other remotes from the registry are forwarded to `remote.url` automatically — you don't need to list them.
 
 | Field | Description |
 |---|---|
@@ -103,7 +107,7 @@ In the `nexus` orchestrator's root `package.json`:
 }
 ```
 
-`switch-local.mjs` accepts `<name> <port>` and atomically rewrites the `local` block to that one entry.
+`switch-local.mjs` accepts `<name> <port>` and atomically rewrites the `local` block to that one entry. You do not need to add anything else — all other remotes in the registry are forwarded to the shared env automatically.
 
 ## Output
 

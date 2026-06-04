@@ -94,8 +94,10 @@ bootstrapApplication(EntryComponent, {
     provideNexusRemote({
       entry: EntryComponent,
       configDefaults: {
-        registryUrl: 'http://localhost:3000',
+        registryUrl: 'http://registry:3000',   // internal Docker default
         nexusToken: 'dev-token',
+        // publicUrl and upstreamUrl come from /assets/config.json
+        // injected by docker-entrypoint.d/40-runtime-config.sh at container start
       },
     }),
   ],
@@ -108,6 +110,36 @@ bootstrapApplication(EntryComponent, {
 - Registers a `SelfRegisterService` that POSTs (or PUTs) the remote's config to the registry at bootstrap
 
 So when a remote container starts in production it announces itself automatically — no manual `bnx publish` needed if the registry already knows it (config writeback handles updates).
+
+## Environment variables
+
+The remote template's entrypoint script writes `/assets/config.json` at container start from these environment variables:
+
+| Variable | Description | Example |
+|---|---|---|
+| `REGISTRY_INTERNAL_URL` | Internal URL the remote POSTs itself to at bootstrap. | `http://registry:3000` |
+| `NEXUS_TOKEN` | Shared secret — must match the registry's token. | `my-secret` |
+| `PUBLIC_URL` | The path the browser uses to reach this remote's federation entry. | `/remotes/catalog/remoteEntry.json` |
+| `UPSTREAM_URL` | The internal Docker URL gateway proxies to. Can be any valid hostname on the Docker network. | `http://my-catalog-svc:80` |
+
+A minimal docker-compose service definition:
+
+```yaml
+  remote-catalog:
+    build: ./remote-catalog
+    container_name: remote-catalog
+    expose:
+      - "80"
+    environment:
+      REGISTRY_INTERNAL_URL: http://registry:3000
+      NEXUS_TOKEN: ${NEXUS_TOKEN:-dev-token}
+      PUBLIC_URL: /remotes/catalog/remoteEntry.json
+      UPSTREAM_URL: http://remote-catalog:80
+    networks:
+      - nexus-net
+```
+
+The Docker service name (`remote-catalog`) and `UPSTREAM_URL` can differ — use whatever naming convention your team prefers. Gateway reads `UPSTREAM_URL` from the registry, not from the service name.
 
 ## Federation config
 
@@ -137,6 +169,11 @@ Because every remote ships its own Angular runtime in dev mode (and *shares* it 
 ## Docker
 
 ```dockerfile
+# Runtime env-vars (set in docker-compose or at container start):
+#   REGISTRY_INTERNAL_URL  where this remote registers itself
+#   NEXUS_TOKEN            shared secret
+#   PUBLIC_URL             browser-facing path to remoteEntry.json
+#   UPSTREAM_URL           internal Docker URL for gateway proxy
 FROM node:22-alpine AS builder
 COPY package*.json .npmrc ./
 RUN --mount=type=secret,id=node_auth_token,required=true \
@@ -167,4 +204,4 @@ Open http://localhost:8700 and you see the `AppComponent` (`src/app/app.componen
 
 1. **`bnx generate remote`** — recommended. Clones this template, substitutes placeholders, drops it in a new folder. See [workflows/create-remote](../workflows/create-remote.md).
 2. **Fork manually** — for an existing repo you want to convert. Copy `federation.config.js`, add the dev-dep `@bimo-dk/nexus-build`, annotate your entry component with `@NexusRemote()`.
-3. **Add via portal only** — for a *running* remote that you only need to make visible. Open `/remotes/new`, fill in name + URL. No code change.
+3. **Add via portal** — for a remote that doesn't use `provideNexusRemote()` (e.g. a non-Angular remote, or a remote you don't control). Open `/remotes/new`, fill in `name`, `url`, `upstreamUrl`. Gateway picks it up immediately via WebSocket.

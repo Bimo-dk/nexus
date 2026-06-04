@@ -109,16 +109,23 @@ If the last request returns `401`, the token in `.env` does not match what the r
 
 ## 5. Add your first remote
 
-Open http://localhost:8669, go to **Remotes → Add remote**, and fill in:
+### Automatic (recommended)
 
-```
-name:           remoteOne
-url:            /remotes/remoteOne/remoteEntry.json
-exposedModule:  ./RemoteEntry
-routePath:      remote-one
+Deploy a remote container with these environment variables set:
+
+```yaml
+environment:
+  REGISTRY_INTERNAL_URL: http://registry:3000
+  NEXUS_TOKEN: ${NEXUS_TOKEN}
+  PUBLIC_URL: /remotes/checkout/remoteEntry.json
+  UPSTREAM_URL: http://checkout:80
 ```
 
-The host receives a WebSocket broadcast and registers the route within seconds. Open http://localhost:8668/remote-one — the micro frontend is live.
+When the container starts, `provideNexusRemote()` POSTs the remote to the registry. The registry broadcasts `remotes_changed`. The host adds the route. Gateway adds the proxy. The remote is live at `http://localhost:8668/checkout` within seconds — with no config changes anywhere else.
+
+### Manual (via portal)
+
+Open http://localhost:8669 → **Remotes → Add remote**, and fill in `name`, `url`, `upstreamUrl`, `exposedModule` and `routePath`. The host receives a WebSocket broadcast and registers the route within seconds.
 
 ## Common environment variables
 

@@ -36,10 +36,11 @@ That is the only federation call the gateway ever makes. Everything else is hand
 
 At container start, `docker-entrypoint.d/40-runtime-config.sh` runs before nginx. It substitutes environment variables into the prebuilt assets so the same image is reused across staging/prod with different config.
 
-| Env var | Used as |
-|---|---|
-| `HOST_REMOTE_ENTRY` | URL to host's `remoteEntry.json` — typically `/host/remoteEntry.json` |
-| `HOST_EXPOSED_MODULE` | Module key — typically `./AppShell` |
+| Env var | Description | Default |
+|---|---|---|
+| `HOST_REMOTE_ENTRY` | URL to host's `remoteEntry.json` | `/host/remoteEntry.json` |
+| `HOST_EXPOSED_MODULE` | Module key exposed by the host | `./AppShell` |
+| `REGISTRY_INTERNAL_URL` | Internal URL the gateway uses to reach the registry at startup and for WebSocket. | `http://registry:3000` |
 
 These are written into `environment.prod.ts` placeholders at build time, *and* into `/assets/config.json` at container start, so both the bundled SPA and any runtime overrides see the same value.
 
@@ -68,11 +69,9 @@ location ^~ /host/ {
   proxy_pass http://host:80;
 }
 
-# /remotes/<name>/* — each remote
-location ^~ /remotes/remoteOne/ {
-  rewrite ^/remotes/remoteOne(/.*)$ $1 break;
-  proxy_pass http://remote-one:80;
-}
+# /remotes/<name>/* — generated dynamically from registry
+# See docker-entrypoint.d/40-runtime-config.sh
+include /etc/nginx/conf.d/remotes.conf;
 
 # Federation entries — never cache
 location ~* remoteEntry\.(json|js)$ {
@@ -83,11 +82,13 @@ location ~* remoteEntry\.(json|js)$ {
 
 The full file is at [`nexus-gateway/nginx.conf`](https://github.com/Bimo-dk/nexus-gateway/blob/main/nginx.conf).
 
-### Adding a route for a new remote
+## How remote routes work
 
-The gateway image ships with proxy blocks for `remoteOne` and `remoteTwo`. To support `remoteThree`, you need to extend `nginx.conf` and rebuild the gateway image (or fork it). The reason this is not automatic: the upstream Docker DNS name (`remote-three:80`) must exist on the network — so the change is coupled to your compose/k8s topology.
+Gateway has no hardcoded remote names. At container start, `docker-entrypoint.d/40-runtime-config.sh` calls `GET /api/remotes` on the registry and generates `/etc/nginx/conf.d/remotes.conf` — one `location` block per enabled remote, using the remote's `upstreamUrl` as the nginx upstream. Nginx then includes this file.
 
-A future version of `nexus-gateway` will read upstreams from a config file at container start; for now it's a build-time list.
+After nginx starts, a lightweight Node process connects to the registry WebSocket (`/ws`). On every `remotes_changed` message it regenerates `remotes.conf` and calls `nginx -s reload`. The reload is graceful — existing connections are drained before worker processes are replaced.
+
+You never touch nginx config to add a remote.
 
 ## Security headers
 
@@ -130,7 +131,7 @@ The `gettext` package is included so `envsubst` can fill the runtime config temp
 
 | Task | Where |
 |---|---|
-| Add a new `/remotes/<name>/*` route | `nginx.conf` |
+| Change the registry URL gateway connects to | `REGISTRY_INTERNAL_URL` env-var |
 | Add a security header | `nginx.conf` |
 | Change retry behaviour for failed host load | `src/app/services/host-loader.service.ts` |
 | Change the public port | `docker-compose.yml` `ports:` entry |
