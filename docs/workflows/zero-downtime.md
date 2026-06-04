@@ -2,6 +2,8 @@
 id: zero-downtime
 title: Zero-downtime updates
 sidebar_position: 3
+description: How Nexus delivers zero-downtime deploys for Angular micro frontends. Registry WebSocket broadcast triggers host route refresh and nginx graceful reload — no dropped requests, no tab refresh, no version pinning.
+keywords: [Angular micro frontend zero downtime, micro frontend live deploy, Angular federation hot update, WebSocket micro frontend deploy]
 ---
 
 # Zero-downtime updates

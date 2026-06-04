@@ -2,6 +2,8 @@
 id: portal
 title: Portal
 sidebar_position: 3
+description: The Nexus admin portal — Angular 19 operator UI for managing remotes, viewing live logs and metrics, toggling features, and monitoring registry health. Real-time updates over WebSocket, no page refresh needed.
+keywords: [micro frontend admin portal, Angular admin dashboard, remote management UI, micro frontend operator tools]
 ---
 
 # Portal

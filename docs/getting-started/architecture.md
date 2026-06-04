@@ -2,6 +2,8 @@
 id: architecture
 title: Architecture
 sidebar_position: 4
+description: Deep dive into the Nexus architecture — request flow through the gateway, cold start vs live update timelines, three-layer fallback chain, zero-downtime deploy flow, and the security model.
+keywords: [Angular micro frontend architecture, micro frontend request flow, Native Federation architecture, zero-downtime micro frontend]
 ---
 
 # Architecture

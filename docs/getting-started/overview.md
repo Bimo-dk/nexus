@@ -2,6 +2,8 @@
 id: overview
 title: Overview
 sidebar_position: 2
+description: What Bimo-Nexus is — an opinionated Angular 19 production stack on top of Native Federation. Mental model, three runtime trust zones, multi-repo layout, and what you never have to write.
+keywords: [Angular micro frontend overview, Native Federation platform, micro frontend architecture, Angular federation setup]
 ---
 
 # What is Bimo-Nexus

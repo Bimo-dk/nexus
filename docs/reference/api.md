@@ -2,6 +2,8 @@
 id: api
 title: Registry HTTP & WS API
 sidebar_position: 3
+description: Full API reference for the Nexus registry — REST endpoints for remotes, system health, metrics and logs. WebSocket message schema for remotes_changed, system_health, log and ping/pong. Authentication and error shapes.
+keywords: [Nexus registry API, micro frontend REST API, Angular federation WebSocket API, registry API reference]
 ---
 
 # Registry HTTP & WS API

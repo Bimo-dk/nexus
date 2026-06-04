@@ -2,6 +2,7 @@
 id: ports
 title: Ports & URLs
 sidebar_position: 5
+description: Port assignments for all Nexus services in production and dev mode. URL contract behind the gateway — which prefix routes to which service, and why the cache rules matter for zero-downtime deploys.
 ---
 
 # Ports & URLs

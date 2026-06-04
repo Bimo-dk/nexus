@@ -2,6 +2,8 @@
 id: proxy
 title: Dev Proxy
 sidebar_position: 6
+description: The Nexus dev proxy — run one Angular remote locally with HMR while the rest of the stack runs on shared staging. One command, no Docker, no local dependencies for other services.
+keywords: [Angular micro frontend dev proxy, micro frontend local development, Angular hot reload federation, bnx dev]
 ---
 
 # Dev Proxy

@@ -2,6 +2,8 @@
 id: nexus-testing
 title: '@bimo-dk/nexus-testing'
 sidebar_position: 7
+description: "@bimo-dk/nexus-testing — test utilities for Angular micro frontend remotes. Mock registry, fake federation loader, and test providers for DynamicNexusService. Write unit tests for remotes without a running stack."
+keywords: [Angular micro frontend testing, nexus-testing Angular, mock federation Angular, test micro frontend Angular]
 ---
 
 # @bimo-dk/nexus-testing

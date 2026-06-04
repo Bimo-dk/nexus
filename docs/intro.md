@@ -1,8 +1,10 @@
 ---
 id: intro
-title: Nexus
+title: Nexus — Angular Micro Frontend Platform
 slug: /
 sidebar_position: 1
+description: Nexus is an open-source Angular 19 micro frontend platform. Zero-config federation, live remote registration, cross-team component catalog, and zero-downtime deploys — all out of the box.
+keywords: [Angular micro frontend, Native Federation, Angular 19, micro frontend platform, module federation, Angular federation]
 ---
 
 # Nexus — micro frontends without the pain

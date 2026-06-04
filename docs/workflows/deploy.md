@@ -2,6 +2,8 @@
 id: deploy
 title: Deployment
 sidebar_position: 4
+description: Deploy a Nexus micro frontend stack to production. Docker Compose, GitHub Actions CI, environment variables, BuildKit secrets, health checks and rollback strategy — the complete production deployment guide.
+keywords: [Angular micro frontend deployment, Docker Compose micro frontend, GitHub Actions Angular CI, micro frontend production deploy]
 ---
 
 # Deployment

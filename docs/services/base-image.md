@@ -2,6 +2,8 @@
 id: base-image
 title: Base Image
 sidebar_position: 7
+description: The Nexus base Docker image — Alpine-based layer with Node 22, nginx, wget and curl pre-installed. Cuts 30s off cold-cache builds for every service. Two stages — builder and runtime — shared across the entire platform.
+keywords: [Docker base image micro frontend, Node 22 Alpine Docker, micro frontend Docker layer, nginx Alpine base image]
 ---
 
 # Base Image

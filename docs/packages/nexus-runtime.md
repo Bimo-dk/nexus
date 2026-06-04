@@ -2,6 +2,8 @@
 id: nexus-runtime
 title: '@bimo-dk/nexus-runtime'
 sidebar_position: 5
+description: "@bimo-dk/nexus-runtime — Angular 19 providers for host and remote federation. provideNexusHost, provideNexusRemote, DynamicNexusService, nexusRoute and NexusComponent. Zero-boilerplate federation wiring."
+keywords: [provideNexusHost Angular, provideNexusRemote Angular, DynamicNexusService, Angular micro frontend runtime providers]
 ---
 
 # @bimo-dk/nexus-runtime

@@ -2,6 +2,8 @@
 id: installation
 title: Installation
 sidebar_position: 3
+description: Install and run the Nexus Angular micro frontend platform. Prerequisites, environment variables, docker compose up, smoke test, and adding your first remote — running in under 5 minutes.
+keywords: [Angular micro frontend install, Nexus installation, docker compose Angular, micro frontend setup guide]
 ---
 
 # Installation

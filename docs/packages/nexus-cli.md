@@ -2,6 +2,8 @@
 id: nexus-cli
 title: '@bimo-dk/nexus-cli (bnx)'
 sidebar_position: 8
+description: "bnx — the Nexus CLI. Generate remotes, publish to the registry, toggle features, run the dev proxy, and manage the platform from the terminal. bnx generate remote, bnx publish, bnx dev, bnx toggle."
+keywords: [bnx CLI Angular, Nexus CLI micro frontend, bnx generate remote, Angular micro frontend CLI tools]
 ---
 
 # @bimo-dk/nexus-cli — `bnx`

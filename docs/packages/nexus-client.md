@@ -2,6 +2,8 @@
 id: nexus-client
 title: '@bimo-dk/nexus-client'
 sidebar_position: 3
+description: "@bimo-dk/nexus-client — Node.js client for the Nexus registry API. Publish remotes from CI, toggle features, trigger redeployments. The engine behind bnx publish and bnx toggle."
+keywords: [nexus-client Node.js, Nexus registry API client, micro frontend CI publish, bnx publish Node]
 ---
 
 # @bimo-dk/nexus-client

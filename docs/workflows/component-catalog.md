@@ -2,6 +2,8 @@
 id: component-catalog
 title: Component catalog
 sidebar_position: 6
+description: Expose and consume Angular components across micro frontend boundaries using the Nexus component catalog. Share UI elements between remotes with NexusComponent — no rebuild, no redeploy of the consuming remote.
+keywords: [Angular cross-remote components, micro frontend component sharing, NexusComponent Angular, Angular federation component catalog]
 ---
 
 # Component catalog

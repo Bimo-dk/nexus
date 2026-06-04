@@ -2,6 +2,8 @@
 id: overview
 title: Packages overview
 sidebar_position: 1
+description: Overview of all seven @bimo-dk/nexus npm packages — core types, client services, build tooling, Angular runtime providers, UI components, testing utilities, and the bnx CLI. Published to GitHub Packages.
+keywords: [bimo-dk nexus packages, Angular micro frontend npm packages, nexus-runtime Angular, nexus-build Angular]
 ---
 
 # Packages

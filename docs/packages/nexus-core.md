@@ -2,6 +2,8 @@
 id: nexus-core
 title: '@bimo-dk/nexus-core'
 sidebar_position: 2
+description: "@bimo-dk/nexus-core — shared TypeScript types and interfaces for the entire Nexus platform. RemoteConfig, HealthSnapshot, LogEntry and more. Used by every service and package in the stack."
+keywords: [nexus-core TypeScript types, Angular micro frontend types, RemoteConfig interface, Nexus platform types]
 ---
 
 # @bimo-dk/nexus-core

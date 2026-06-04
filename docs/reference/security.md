@@ -2,6 +2,8 @@
 id: security
 title: Security
 sidebar_position: 2
+description: Nexus security model — X-Nexus-Token shared secret, CORS allowlist, BuildKit secret mounts for NODE_AUTH_TOKEN, security headers from nginx, and token passthrough in the dev proxy. What is protected and what is not.
+keywords: [micro frontend security, Angular federation security, X-Nexus-Token, BuildKit secrets Docker]
 ---
 
 # Security
