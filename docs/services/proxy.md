@@ -24,7 +24,7 @@ The traditional micro-frontend dev story is painful:
 Within five minutes you've spent an afternoon on plumbing. The Nexus dev proxy collapses it to:
 
 ```bash
-npm run dev:remote-one
+npm run dev:catalog
 ```
 
 You see the entire app, but only your remote is local.
@@ -71,7 +71,7 @@ Only list the remote you are actively developing in `local`. All other remotes f
 | `remote.registryApiPath` | Default `/api`. Override if the staging registry lives elsewhere. |
 | `logRouting` | `true` to log every request's destination. |
 
-The CLI helper `dev-tools/switch-local.mjs` rewrites the `local` block atomically — used by the npm scripts so you can do `npm run dev:remote-two` without manually editing JSON.
+The CLI helper `dev-tools/switch-local.mjs` rewrites the `local` block atomically — used by the npm scripts so you can do `npm run dev:cart` without manually editing JSON.
 
 ## Token & correlation passthrough
 
@@ -91,7 +91,7 @@ Restart the proxy. Now your local remote hits the staging registry, host and oth
 
 ## Hot reload
 
-When you edit code in the locally running remote (e.g. `remote-one/src/...`), Angular's dev server reloads. The proxy does not need a restart — it does not read files; it only proxies URLs.
+When you edit code in the locally running remote (e.g. `remote-catalog/src/...`), Angular's dev server reloads. The proxy does not need a restart — it does not read files; it only proxies URLs.
 
 If you edit code on the proxy itself, restart it with `Ctrl+C` and re-run the npm script.
 
@@ -118,10 +118,10 @@ In the `nexus` orchestrator's root `package.json`:
 │  Listening:  http://localhost:9000
 │  Shared:     http://localhost:8668
 │  Local:
-│    /remotes/remoteOne/* -> http://localhost:8666
+│    /remotes/catalog/* -> http://localhost:8701
 ╰───────────────────────────────────────────────────────────
 
-[nexus-proxy] GET    /remotes/remoteOne/remoteEntry.json     -> LOCAL remoteOne (http://localhost:8666)
+[nexus-proxy] GET    /remotes/catalog/remoteEntry.json       -> LOCAL catalog (http://localhost:8701)
 [nexus-proxy] GET    /host/remoteEntry.json                  -> SHARED (http://localhost:8668)
 [nexus-proxy] POST   /api/remotes                            -> SHARED (http://localhost:8668)
 ```

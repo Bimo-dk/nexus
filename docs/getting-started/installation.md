@@ -81,7 +81,7 @@ docker compose up --build
 Services start in dependency order:
 
 ```
-registry → host, remote-one, remote-two → gateway, portal
+registry → host, remotes → gateway, portal
 ```
 
 When everything is healthy:

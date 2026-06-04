@@ -39,7 +39,7 @@ registry:3000
   │      GET /remotes/<name>/remoteEntry.json  →  remote's upstreamUrl
   │
   ▼
-remote-one:80    remote-two:80    ...
+remote-catalog:80    remote-cart:80    ...
 ```
 
 Everything that the browser sees is `localhost:8668` — the gateway hides all upstream services behind a single nginx reverse-proxy.
@@ -58,8 +58,8 @@ T+50 ms  browser   GET /assets/config.json        gateway
 T+100ms  browser   GET /host/remoteEntry.json     gateway → host
 T+150ms  host      GET /api/remotes               registry
 T+200ms  host      WS  /ws (subscribe)            registry
-T+250ms  host      loadRemoteModule(remoteOne)
-T+300ms  browser   GET /remotes/remoteOne/...     gateway → remote-one
+T+250ms  host      loadRemoteModule(catalog)
+T+300ms  browser   GET /remotes/catalog/...       gateway → remote-catalog
 ```
 
 ### Live add (operator opens portal and adds a remote)

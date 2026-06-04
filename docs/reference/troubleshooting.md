@@ -186,7 +186,7 @@ docker compose logs -f registry
 # Internal docker network connectivity
 docker compose exec gateway wget -qO- http://registry:3000/health
 docker compose exec gateway wget -qO- http://host:80/health
-docker compose exec gateway wget -qO- http://remote-one:80/health
+docker compose exec gateway wget -qO- http://remote-catalog:80/health
 ```
 
 If `wget` from inside the gateway works but the browser doesn't, the issue is gateway's `nginx.conf` or the browser cache.

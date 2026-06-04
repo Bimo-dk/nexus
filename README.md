@@ -120,7 +120,7 @@ nexus-remote-templat/         remote scaffold (consumed by `bnx generate remote`
 nexus-proxy/                  dev-time hot-reload proxy
 nexus-base-image/             shared Docker base
 nexus-packages/               @bimo-dk/* monorepo (Turbo + Changesets)
-nexus-example/                runnable demo orchestrator — 20+ tagged demo components
+nexus-example/                NexusShop demo — 5 remotes showing nexusRoute, <nexus-component> and cross-remote composition
 ```
 
 ---

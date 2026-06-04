@@ -18,10 +18,10 @@ The **registry** is the source of truth for which remotes the host should load. 
 {
   "remotes": [
     {
-      "name": "remoteOne",          // camelCase, unique
-      "url": "/remotes/remoteOne/remoteEntry.json",
-      "exposedModule": "./RemoteEntry",
-      "routePath": "remote-one",    // kebab-case
+      "name": "catalog",
+      "url": "/remotes/catalog/remoteEntry.json",
+      "exposedModule": "./CatalogPage",
+      "routePath": "products",
       "enabled": true,
       "addedAt": "2026-06-01T12:34:56.789Z"
     }

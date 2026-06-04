@@ -53,11 +53,13 @@ export default class EntryComponent {}
 
 ### 2. Annotate your entry component
 
+**Default export — `exposeAs` inferred as `'RemoteEntry'`:**
+
 ```ts
 import { Component } from '@angular/core';
 import { NexusRemote } from '@bimo-dk/nexus-build';
 
-@NexusRemote()                  // options-free is fine
+@NexusRemote()
 @Component({
   selector: 'app-checkout',
   template: `<h1>Checkout</h1>`,
@@ -65,7 +67,27 @@ import { NexusRemote } from '@bimo-dk/nexus-build';
 export default class CheckoutComponent {}
 ```
 
-That's it.
+This generates `{ "./RemoteEntry": "./src/app/remote-entry/entry.component.ts" }` and the remote self-registers with `exposedModule: './RemoteEntry'`. This matches the scaffold default — nothing to configure.
+
+**Named export — set `exposeAs` to match your federation key:**
+
+```ts
+import { Component } from '@angular/core';
+import { NexusRemote } from '@bimo-dk/nexus-build';
+
+@NexusRemote({ exposeAs: 'CheckoutPage' })
+@Component({
+  selector: 'app-checkout',
+  template: `<h1>Checkout</h1>`,
+})
+export class CheckoutPageComponent {}
+```
+
+This generates `{ "./CheckoutPage": "..." }`. The remote self-registers with `exposedModule: './CheckoutPage'`. Use this whenever you expose the module under a key other than `./RemoteEntry` — for example when one remote exposes multiple components (`CartPage`, `MiniCart`).
+
+:::important
+`exposeAs` in the decorator must match the key in `federation.config.json`'s `exposes` block. If they diverge, the host loads the correct federation module but the registry stores the wrong `exposedModule`, and navigation will fail.
+:::
 
 ## How auto-detection works
 
@@ -83,7 +105,7 @@ Route is derived from the name (camelCase → kebab-case): `checkoutPage` → `c
 |---|---|---|---|
 | `name` | `string` | inferred | Remote name (camelCase) |
 | `route` | `string` | inferred from `name` | Route path (kebab-case) |
-| `exposeAs` | `string` | `'RemoteEntry'` | Key under `exposes` |
+| `exposeAs` | `string` | `'RemoteEntry'` | Key under `exposes` in `federation.config.json`. Must match the key the host uses to load the component. Set this whenever you deviate from the scaffold default (`./RemoteEntry`). |
 
 The decorator returns the class untouched at runtime — it only stores metadata read by the CLI at build time.
 

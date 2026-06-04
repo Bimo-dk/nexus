@@ -49,7 +49,7 @@ await client.deleteRemote('checkout');
 ### Health
 
 ```ts
-const remoteHealth = await client.checkHealth('http://remote-one/health');
+const remoteHealth = await client.checkHealth('http://remote-catalog/health');
 // { status: 'healthy' | 'degraded' | 'down' | 'unknown', latencyMs: 12 }
 
 const systemHealth = await client.getSystemHealth();

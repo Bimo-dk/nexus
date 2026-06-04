@@ -39,7 +39,9 @@ The scaffold contains:
 
 ## 2. Implement
 
-Edit `src/app/remote-entry/entry.component.ts`:
+Edit `src/app/remote-entry/entry.component.ts`.
+
+**Default export (scaffold default — no extra config needed):**
 
 ```ts
 import { Component, signal } from '@angular/core';
@@ -58,6 +60,27 @@ export default class CheckoutComponent {
   readonly total = signal(0);
 }
 ```
+
+`@NexusRemote()` with no options defaults `exposeAs` to `'RemoteEntry'`, which matches the scaffold's `federation.config.json` expose key `./RemoteEntry`. This is the zero-config path.
+
+**Named export (use when you expose the module under a custom key):**
+
+```ts
+import { Component, signal } from '@angular/core';
+import { NexusRemote } from '@bimo-dk/nexus-build';
+
+@NexusRemote({ exposeAs: 'CheckoutPage' })
+@Component({
+  selector: 'app-checkout',
+  standalone: true,
+  template: `<h1>Checkout</h1>`,
+})
+export class CheckoutPageComponent {
+  readonly total = signal(0);
+}
+```
+
+When `exposeAs` is set, the federation config exposes `./CheckoutPage` and the remote self-registers with `exposedModule: './CheckoutPage'`. Both the federation build and the registry entry stay in sync automatically.
 
 Add child routes, services, lazy modules — anything Angular allows. This file's class is what the host mounts.
 
@@ -199,7 +222,7 @@ The host already mounted you at `/checkout`, so internally your routes are `/che
 | `POST /api/remotes` returns 409 | A remote with that name already exists. Use `PUT` (or delete first). |
 | Remote registered but gateway returns 502 | `UPSTREAM_URL` is wrong or the container is not on the nexus-net network. Check `docker compose logs gateway` for the nginx upstream error. |
 | Remote registered but gateway hasn't reloaded yet | Gateway reloads on `remotes_changed` — wait 1-2 seconds. If it never reloads, check `docker compose logs gateway` for WebSocket connection errors to the registry. |
-| Host shows "failed remote" with `loadRemoteModule` error | `remoteEntry.json` was reachable but `exposedModule` key is wrong. Verify `nexus-build` ran. |
+| Host shows "failed remote" with `loadRemoteModule` error | `remoteEntry.json` was reachable but `exposedModule` key is wrong. Verify `nexus-build` ran and that `exposeAs` in the decorator matches the key in `federation.config.json`. |
 
 ## Related
 
