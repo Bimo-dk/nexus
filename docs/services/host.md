@@ -2,6 +2,8 @@
 id: host
 title: Host
 sidebar_position: 4
+description: The Nexus host shell — Angular 19 layout with header, sidebar and router-outlet that federates remotes at runtime. Three-layer fallback chain, live WebSocket updates, zero federation boilerplate for consuming teams.
+keywords: [Angular micro frontend host, Angular Native Federation host, micro frontend layout shell, Angular federation bootstrap]
 ---
 
 # Host

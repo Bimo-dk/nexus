@@ -2,6 +2,8 @@
 id: troubleshooting
 title: Troubleshooting
 sidebar_position: 4
+description: Nexus troubleshooting guide — remote not appearing, 401 on registry calls, WebSocket not connecting, federation load failures, stale remoteEntry.json, and Docker volume issues. Symptoms, causes and fixes.
+keywords: [Nexus troubleshooting, Angular federation errors, micro frontend debug, remote not loading Angular]
 ---
 
 # Troubleshooting

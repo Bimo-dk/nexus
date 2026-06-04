@@ -2,6 +2,8 @@
 id: loading-patterns
 title: Loading patterns
 sidebar_position: 7
+description: Patterns for loading Angular micro frontend remotes — route-based lazy loading with nexusRoute, inline embedding with NexusComponent, and programmatic loading via ComponentLoaderService. Choose the right pattern for your use case.
+keywords: [Angular federation loading patterns, nexusRoute Angular, NexusComponent inline loading, Angular micro frontend lazy loading]
 ---
 
 # Loading patterns

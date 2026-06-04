@@ -2,6 +2,8 @@
 id: nexus-ui
 title: '@bimo-dk/nexus-ui'
 sidebar_position: 6
+description: "@bimo-dk/nexus-ui — shared Angular UI component library for Nexus-based applications. Status indicators, registry health widgets and platform-consistent design tokens shared across host and remotes."
+keywords: [nexus-ui Angular components, micro frontend shared UI, Angular component library federation, Nexus design system]
 ---
 
 # @bimo-dk/nexus-ui

@@ -2,6 +2,8 @@
 id: registry
 title: Registry
 sidebar_position: 2
+description: The Nexus registry — Node/Express source of truth for all remotes. WebSocket broadcast on change, JSON persistence, observability endpoints for logs, metrics, and health checks.
+keywords: [micro frontend registry, Angular remote registry, WebSocket micro frontend, micro frontend source of truth]
 ---
 
 # Registry

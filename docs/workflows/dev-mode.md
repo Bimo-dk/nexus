@@ -2,6 +2,8 @@
 id: dev-mode
 title: Local dev mode (hot reload)
 sidebar_position: 2
+description: Hot-reload a single Angular micro frontend locally while the rest of the stack runs on staging. One command — bnx dev or npm run dev:catalog — no Docker, no configuration changes for other remotes.
+keywords: [Angular micro frontend hot reload, micro frontend local development, Angular HMR federation, bnx dev proxy]
 ---
 
 # Local dev mode

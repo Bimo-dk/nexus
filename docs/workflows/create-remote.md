@@ -2,6 +2,8 @@
 id: create-remote
 title: Create a new remote
 sidebar_position: 1
+description: Step-by-step guide to scaffolding a new Nexus Angular micro frontend remote. One command with bnx generate remote, then docker-compose up — your remote is live and auto-registered in under five minutes.
+keywords: [create Angular micro frontend, bnx generate remote, Angular remote scaffold, micro frontend getting started]
 ---
 
 # Create a new remote

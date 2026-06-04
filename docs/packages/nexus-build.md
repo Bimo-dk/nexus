@@ -2,6 +2,8 @@
 id: nexus-build
 title: '@bimo-dk/nexus-build'
 sidebar_position: 4
+description: "@bimo-dk/nexus-build — the @NexusRemote() decorator and federation config generator. Scans your Angular source for decorated components and auto-generates federation.config.json — no manual federation wiring."
+keywords: [NexusRemote decorator Angular, Angular federation config generator, nexus-build Angular, @NexusRemote Angular decorator]
 ---
 
 # @bimo-dk/nexus-build

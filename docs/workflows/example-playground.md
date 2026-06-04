@@ -2,6 +2,8 @@
 id: example-playground
 title: Example playground
 sidebar_position: 5
+description: NexusShop — a runnable Angular micro frontend demo with 5 independent remotes. Explore nexusRoute, NexusComponent, cross-remote composition, and the full Nexus stack in a real e-commerce application.
+keywords: [Angular micro frontend example, NexusShop demo, Angular Native Federation example, micro frontend playground]
 ---
 
 # NexusShop — example playground

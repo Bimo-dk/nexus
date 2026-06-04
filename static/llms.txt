@@ -1,0 +1,100 @@
+# Nexus — Angular Micro Frontend Platform
+
+> An open-source Angular 19 micro frontend platform built on Native Federation. Zero-config federation, live remote registration, one-command local dev, cross-team component catalog, and zero-downtime deploys — all out of the box. MIT-licensed. Developed by Bimo.
+
+Nexus solves the operational layer that Native Federation alone does not provide: a persistent registry with WebSocket broadcast, automatic remote self-registration, an admin portal, a cross-team component catalog, a hot-reload dev proxy, and a zero-downtime cache strategy baked into nginx. A product team writes Angular components; Nexus handles everything else.
+
+## Documentation
+
+- [Introduction](https://nexus.bimo.dk/): What Nexus is, the 30-second pitch, and what you get out of the box
+- [Why Nexus](https://nexus.bimo.dk/getting-started/why-nexus): What you do NOT have to build, honest tradeoffs, comparison with alternatives
+- [Overview](https://nexus.bimo.dk/getting-started/overview): Mental model, three runtime trust zones, repository layout
+- [Installation](https://nexus.bimo.dk/getting-started/installation): Prerequisites, environment setup, first run, smoke test
+- [Architecture](https://nexus.bimo.dk/getting-started/architecture): Request flow, deploy flow, fallback chain, security model
+- [Ports & URLs](https://nexus.bimo.dk/getting-started/ports): Port assignments, URL contract, cache policy table
+
+## Guides
+
+- [Create a new remote](https://nexus.bimo.dk/workflows/create-remote): End-to-end from scaffold to registered container
+- [Local dev mode](https://nexus.bimo.dk/workflows/dev-mode): Hot reload one remote against staging with `bnx dev`
+- [Zero-downtime updates](https://nexus.bimo.dk/workflows/zero-downtime): Why a remote deploy never breaks the user
+- [Deploy a remote](https://nexus.bimo.dk/workflows/deploy): Production deploy workflow
+- [NexusShop example](https://nexus.bimo.dk/workflows/example-playground): Runnable 5-remote webshop demo showing all features
+- [Component catalog](https://nexus.bimo.dk/workflows/component-catalog): `@NexusComponent`, `catalog.json`, portal `/catalog` page
+- [Loading patterns](https://nexus.bimo.dk/workflows/loading-patterns): `nexusRoute()`, `<nexus-component>`, `ComponentLoaderService`
+
+## Services
+
+- [Gateway](https://nexus.bimo.dk/services/gateway): Public entry — nginx reverse-proxy + minimal Angular shell
+- [Registry](https://nexus.bimo.dk/services/registry): Source of truth — Node/Express + WebSocket broadcast
+- [Portal](https://nexus.bimo.dk/services/portal): Admin UI — dashboard, metrics, remote CRUD, component catalog
+- [Host](https://nexus.bimo.dk/services/host): Layout shell that federates remotes at runtime
+- [Remotes](https://nexus.bimo.dk/services/remotes): Angular remote template and self-registration pattern
+- [Dev proxy](https://nexus.bimo.dk/services/proxy): Hot-reload proxy — one remote local, everything else staging
+- [Base image](https://nexus.bimo.dk/services/base-image): Shared Docker base layer for all services
+
+## Packages
+
+- [@bimo-dk/nexus-runtime](https://nexus.bimo.dk/packages/nexus-runtime): `provideNexusHost`, `provideNexusRemote`, `nexusRoute`, `<nexus-component>`, `DynamicNexusService`, `ComponentLoaderService`, `CatalogService`
+- [@bimo-dk/nexus-build](https://nexus.bimo.dk/packages/nexus-build): `@NexusRemote()` decorator, `@NexusComponent()` decorator, `nexus-build` CLI, `federation.config.json` generator
+- [@bimo-dk/nexus-cli](https://nexus.bimo.dk/packages/nexus-cli): `bnx` CLI — `bnx dev`, `bnx generate remote`, `bnx publish`, `bnx status`, `bnx health`
+- [@bimo-dk/nexus-core](https://nexus.bimo.dk/packages/nexus-core): Shared types, constants, `NexusRuntimeConfig`, `RemoteConfig`
+- [@bimo-dk/nexus-client](https://nexus.bimo.dk/packages/nexus-client): Node.js registry client for server-side tooling and CI pipelines
+- [@bimo-dk/nexus-ui](https://nexus.bimo.dk/packages/nexus-ui): Shared Angular UI components used by the host template and portal
+- [@bimo-dk/nexus-testing](https://nexus.bimo.dk/packages/nexus-testing): Test utilities, mock registry, `MockNexusModule`
+
+## Reference
+
+- [Environment variables](https://nexus.bimo.dk/reference/environment): All env vars across all services
+- [Security](https://nexus.bimo.dk/reference/security): Token model, CORS, BuildKit secrets, GitHub Packages auth
+- [HTTP & WebSocket API](https://nexus.bimo.dk/reference/api): Full registry API reference
+- [Troubleshooting](https://nexus.bimo.dk/reference/troubleshooting): Common problems and their solutions
+
+## Quick start
+
+```bash
+git clone https://github.com/Bimo-dk/nexus-example.git
+cd nexus-example
+cp .env.example .env
+# Set NEXUS_TOKEN and NODE_AUTH_TOKEN (GitHub PAT, read:packages scope)
+docker compose up --build
+# Application:  http://localhost:8668
+# Admin portal: http://localhost:8669
+```
+
+## Key concepts
+
+**`@NexusRemote({ exposeAs: 'MyPage' })`** — Decorator on the entry component of a remote. At build time, `nexus-build` reads this decorator and writes `federation.config.json`. At runtime, `SelfRegisterService` reads it to build the registration payload sent to the registry. The `exposeAs` value must match the key in `federation.config.json`'s `exposes` block.
+
+**`@NexusComponent({ title, category, tags, inputs })`** — Catalog metadata decorator. At build time, generates `catalog.json` next to `remoteEntry.json`. The portal's `/catalog` page and `CatalogService` aggregate these from all registered remotes.
+
+**`provideNexusHost({ configDefaults })`** — Single Angular provider that wires up a host application. Registers an `APP_INITIALIZER` that fetches remotes from the registry, opens the WebSocket, and registers routes — no manual initialization code needed.
+
+**`provideNexusRemote({ entry, configDefaults })`** — Single Angular provider that wires up a remote application. At bootstrap, `SelfRegisterService` POSTs the remote to the registry using metadata from the `@NexusRemote` decorator on the `entry` class.
+
+**`nexusRoute({ path, remote, expose })`** — Returns a standard Angular `Route` with `loadComponent` that uses `ComponentLoaderService` to resolve the federated component. Lazy-loaded, cached, registry-aware.
+
+**`<nexus-component remote="..." expose="..." [inputs]="{...}" />`** — Drop-in Angular component that loads, caches and renders any federated component by name. Handles loading and error states. Import `NexusComponent` from `@bimo-dk/nexus-runtime`.
+
+**Three-layer fallback** — When the registry is unreachable: 1) live registry API, 2) `sessionStorage` cache from last successful fetch, 3) static backup JSON at `staticBackupUrl`.
+
+**Self-registration** — Remotes register themselves at container startup via `provideNexusRemote`. Set `REGISTRY_INTERNAL_URL`, `NEXUS_TOKEN`, `PUBLIC_URL` and `UPSTREAM_URL` in the container's environment. No manual `bnx publish` needed in production.
+
+**Zero-downtime cache strategy** — Gateway nginx sets `Cache-Control: no-store` on `remoteEntry.json` and `chunk-*.js`. New bundles are visible the instant a new container starts. No service worker, no cache-busting hash needed.
+
+## Compared with alternatives
+
+| | Nexus | Plain Native Federation | Build-time monorepo |
+|---|---|---|---|
+| Independent deploys | yes | yes | no |
+| Runtime add/remove remotes | yes (registry + WebSocket) | no | no |
+| Zero-downtime cache strategy | yes (nginx no-store) | manual | n/a |
+| Cross-team component discovery | yes (catalog) | no | in-repo only |
+| Local dev one remote against staging | yes (bnx dev) | manual | n/a |
+| Admin UI | yes (portal) | no | no |
+| Vendor lock-in | none (MIT) | none | none |
+
+## License and source
+
+MIT-licensed. Source code: https://github.com/Bimo-dk/nexus
+Developed and maintained by Bimo: https://bimo.dk

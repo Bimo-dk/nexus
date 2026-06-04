@@ -2,6 +2,8 @@
 id: environment
 title: Environment variables
 sidebar_position: 1
+description: Complete reference of all Nexus environment variables — NEXUS_TOKEN, ALLOWED_ORIGINS, NODE_AUTH_TOKEN, REGISTRY_INTERNAL_URL, PUBLIC_URL, UPSTREAM_URL and more. One table per service.
+keywords: [Nexus environment variables, micro frontend config, NEXUS_TOKEN, Angular micro frontend environment]
 ---
 
 # Environment variables

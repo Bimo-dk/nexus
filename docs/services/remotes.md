@@ -2,6 +2,8 @@
 id: remotes
 title: Remotes
 sidebar_position: 5
+description: The Nexus remote template — Angular 19 micro frontend scaffold. One decorator, zero federation config to write. Self-registers with the registry on container start, discovered by the host instantly via WebSocket broadcast.
+keywords: [Angular micro frontend remote, Angular Native Federation remote, micro frontend scaffold, Angular remote self-registration]
 ---
 
 # Remotes

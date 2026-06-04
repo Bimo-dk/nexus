@@ -2,6 +2,8 @@
 id: gateway
 title: Gateway
 sidebar_position: 1
+description: The Nexus gateway — nginx reverse proxy and Angular SPA entry point. Dynamic remote routing from the registry, security headers, zero-config TLS termination, and graceful nginx reload on every remotes_changed broadcast.
+keywords: [Angular micro frontend gateway, nginx reverse proxy micro frontend, dynamic nginx routing, Angular federation gateway]
 ---
 
 # Gateway

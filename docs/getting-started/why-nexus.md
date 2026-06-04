@@ -2,6 +2,8 @@
 id: why-nexus
 title: Why Nexus
 sidebar_position: 1
+description: What Native Federation alone does not give you, and how Nexus fills the gap — registry, WebSocket broadcast, admin UI, dev proxy, catalog, zero-downtime cache. Honest tradeoffs and comparison with alternatives.
+keywords: [Angular micro frontend, why micro frontend, Native Federation vs Nexus, micro frontend registry, micro frontend architecture]
 ---
 
 # Why Nexus
