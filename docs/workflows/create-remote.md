@@ -11,7 +11,7 @@ End-to-end: from "I need a new remote" to a registered, deployable container.
 ## Pre-flight
 
 - A running registry the new remote can register against (local Docker stack, dev, staging — any).
-- `BIMO_TOKEN` matching the registry's `NEXUS_TOKEN`.
+- `NEXUS_TOKEN` matching the registry's `NEXUS_TOKEN`.
 - `@bimo-dk/nexus-cli` installed: `npm install -g @bimo-dk/nexus-cli`.
 - Auth to GitHub Packages so the build can install `@bimo-dk/*` — see [reference/security](../reference/security.md#github-packages-auth).
 
@@ -93,7 +93,7 @@ Output: `dist/checkout/browser/`.
 ### Via CLI (recommended)
 
 ```bash
-export BIMO_TOKEN=<your-token>
+export NEXUS_TOKEN=<your-token>
 export REGISTRY_URL=http://localhost:8668
 export REMOTE_URL=/remotes/checkout/remoteEntry.json
 bnx publish
@@ -195,7 +195,7 @@ The host already mounted you at `/checkout`, so internally your routes are `/che
 | Problem | Likely cause |
 |---|---|
 | Build fails on `nexus-build` with "no @NexusRemote found" | Your entry component is missing the decorator, or it lives outside `src/`. |
-| `POST /api/remotes` returns 401 | `BIMO_TOKEN` doesn't match the registry's `NEXUS_TOKEN`. |
+| `POST /api/remotes` returns 401 | `NEXUS_TOKEN` doesn't match the registry's `NEXUS_TOKEN`. |
 | `POST /api/remotes` returns 409 | A remote with that name already exists. Use `PUT` (or delete first). |
 | Remote registered but gateway returns 502 | `UPSTREAM_URL` is wrong or the container is not on the nexus-net network. Check `docker compose logs gateway` for the nginx upstream error. |
 | Remote registered but gateway hasn't reloaded yet | Gateway reloads on `remotes_changed` — wait 1-2 seconds. If it never reloads, check `docker compose logs gateway` for WebSocket connection errors to the registry. |

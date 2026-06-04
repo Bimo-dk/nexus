@@ -47,7 +47,7 @@ npm run build
 Reads `federation.config.json` for the current remote and POSTs it to the registry.
 
 ```bash
-export BIMO_TOKEN=...
+export NEXUS_TOKEN=...
 export REGISTRY_URL=http://localhost:3000
 export REMOTE_URL=https://cdn.example.com/checkout/remoteEntry.json
 bnx publish
@@ -60,7 +60,7 @@ Environment variables:
 
 | Variable | Required | Default |
 |---|---|---|
-| `BIMO_TOKEN` | yes | — |
+| `NEXUS_TOKEN` | yes | — |
 | `REGISTRY_URL` | no | `http://localhost:3000` |
 | `REMOTE_URL` | no | `/remotes/<name>/remoteEntry.json` |
 | `REMOTE_ROUTE` | no | derived from `name` |

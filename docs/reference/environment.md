@@ -72,7 +72,7 @@ Same as host (build-time `NEXUS_TOKEN` + `NODE_AUTH_TOKEN`; runtime `/assets/con
 
 | Variable | Default | Notes |
 |---|---|---|
-| `BIMO_TOKEN` | — | Required for `publish`, `status`, `health` |
+| `NEXUS_TOKEN` | — | Required for `publish`, `status`, `health` |
 | `REGISTRY_URL` | `http://localhost:3000` | |
 | `REMOTE_URL` | `/remotes/<name>/remoteEntry.json` | Used by `publish` |
 | `REMOTE_ROUTE` | derived from name | Override the route |
