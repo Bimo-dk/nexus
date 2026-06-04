@@ -99,7 +99,7 @@ No reload, no container restart, no downtime.
                                   └───────────────────┘
 ```
 
-In production each remote is its own container, deployed by its team's CI. The `nexus` orchestrator references them by `build:` context (for dev) or `image:` reference (for prod pulls). Either way the docker network internal name (`host`, `remote-one`, ...) is what `nexus-gateway/nginx.conf` proxies to.
+In production each remote is its own container, deployed by its team's CI. The `nexus` orchestrator references them by `build:` context (for dev) or `image:` reference (for prod pulls). Gateway reads each remote's `UPSTREAM_URL` from the registry and proxies to that address — the Docker service name can be anything.
 
 ## Why a gateway in front of host?
 

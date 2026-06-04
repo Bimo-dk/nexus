@@ -77,30 +77,33 @@ docker compose up -d --build host
 ### Add a remote with code
 
 1. Scaffold with `bnx generate remote` (from `@bimo-dk/nexus-cli`).
-2. Add a service to this `docker-compose.yml`:
+2. Add a service to this `docker-compose.yml` with the required environment variables:
    ```yaml
    remote-three:
      build: ./remote-three
      expose: ["80"]
+     environment:
+       REGISTRY_INTERNAL_URL: http://registry:3000
+       NEXUS_TOKEN: ${NEXUS_TOKEN}
+       PUBLIC_URL: /remotes/remoteThree/remoteEntry.json
+       UPSTREAM_URL: http://remote-three:80
      networks: [nexus-net]
    ```
-3. **Extend the gateway image** to know about `/remotes/remoteThree/*` — see [gateway docs](../services/gateway.md#adding-a-route-for-a-new-remote). The pre-built image only knows about `remoteOne` and `remoteTwo`.
-4. `docker compose up --build remote-three`
-5. Register via the portal UI.
+3. `docker compose up --build remote-three`
+4. The remote registers itself on startup — gateway picks it up automatically via `remotes_changed`.
 
-## How the gateway routes (in this demo)
+## How the gateway routes
 
-The pre-built `gateway` image has hard-coded proxy rules for two remotes — exactly to keep this example trivial:
+The pre-built `gateway` image has no hardcoded remote names. At startup it calls `GET /api/remotes` on the registry and generates nginx proxy rules for every enabled remote, using each remote's `UPSTREAM_URL`. When a remote is added or removed, the registry broadcasts `remotes_changed` and gateway reloads its routes without a container restart.
 
 | URL prefix | Target |
 |---|---|
 | `/host/*` | `host:80/*` |
-| `/remotes/remoteOne/*` | `remote-one:80/*` |
-| `/remotes/remoteTwo/*` | `remote-two:80/*` |
+| `/remotes/<name>/*` | remote's `UPSTREAM_URL` (from registry) |
 | `/api/*` | `registry:3000/api/*` |
 | `/ws` | `registry:3000/ws` |
 
-This is why the service names in this `docker-compose.yml` must match exactly: `host`, `remote-one`, `remote-two`, `registry`.
+The `host` and `registry` service names must still match — those are the only names hardcoded in the gateway's static nginx config.
 
 ## Troubleshooting
 
@@ -113,7 +116,7 @@ This is why the service names in this `docker-compose.yml` must match exactly: `
 
 ## What this example is NOT
 
-- Not a production template — gateway is pinned to two remotes by build.
+- Not a production template — host and remotes are minimal stubs for exploration, not production-grade code.
 - Not a replacement for `bnx dev` (which is a far better developer loop for a real product).
 - Not exhaustive — the editable services are deliberately minimal so you can read every file.
 
