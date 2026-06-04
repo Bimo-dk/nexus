@@ -44,44 +44,6 @@ At container start, `docker-entrypoint.d/40-runtime-config.sh` runs before nginx
 
 These are written into `environment.prod.ts` placeholders at build time, *and* into `/assets/config.json` at container start, so both the bundled SPA and any runtime overrides see the same value.
 
-## Nginx configuration
-
-`nginx.conf` is short and worth reading in full — it is the URL contract for the whole platform.
-
-```nginx
-# /api/*  → registry HTTP API
-location ^~ /api/ {
-  proxy_pass http://registry:3000;
-}
-
-# /ws — registry WebSocket (with Upgrade headers)
-location ^~ /ws {
-  proxy_pass http://registry:3000;
-  proxy_http_version 1.1;
-  proxy_set_header Upgrade $http_upgrade;
-  proxy_set_header Connection "Upgrade";
-  proxy_read_timeout 86400;
-}
-
-# /host/* — host layout shell (prefix stripped)
-location ^~ /host/ {
-  rewrite ^/host(/.*)$ $1 break;
-  proxy_pass http://host:80;
-}
-
-# /remotes/<name>/* — generated dynamically from registry
-# See docker-entrypoint.d/40-runtime-config.sh
-include /etc/nginx/conf.d/remotes.conf;
-
-# Federation entries — never cache
-location ~* remoteEntry\.(json|js)$ {
-  add_header Cache-Control "no-store, no-cache, must-revalidate" always;
-  try_files $uri =404;
-}
-```
-
-The full file is at [`nexus-gateway/nginx.conf`](https://github.com/Bimo-dk/nexus-gateway/blob/main/nginx.conf).
-
 ## How remote routes work
 
 Gateway has no hardcoded remote names. At container start, `docker-entrypoint.d/40-runtime-config.sh` calls `GET /api/remotes` on the registry and generates `/etc/nginx/conf.d/remotes.conf` — one `location` block per enabled remote, using the remote's `upstreamUrl` as the nginx upstream. Nginx then includes this file.
