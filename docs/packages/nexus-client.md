@@ -19,7 +19,7 @@ import { RegistryClient } from '@bimo-dk/nexus-client';
 
 const client = new RegistryClient({
   registryUrl: 'http://localhost:3000',
-  token: process.env.BIMO_TOKEN!,
+  token: process.env.NEXUS_TOKEN!,
 });
 ```
 
@@ -49,7 +49,7 @@ await client.deleteRemote('checkout');
 ### Health
 
 ```ts
-const remoteHealth = await client.checkHealth('http://remote-one/health');
+const remoteHealth = await client.checkHealth('http://remote-catalog/health');
 // { status: 'healthy' | 'degraded' | 'down' | 'unknown', latencyMs: 12 }
 
 const systemHealth = await client.getSystemHealth();
@@ -66,7 +66,7 @@ import { RegistryWebSocket } from '@bimo-dk/nexus-client';
 
 const ws = new RegistryWebSocket({
   registryUrl: 'http://localhost:3000',
-  token: process.env.BIMO_TOKEN!,
+  token: process.env.NEXUS_TOKEN!,
 });
 
 ws.onMessage((msg) => {
@@ -139,7 +139,7 @@ import { RegistryClient } from '@bimo-dk/nexus-client';
 
 const client = new RegistryClient({
   registryUrl: process.env.REGISTRY_URL!,
-  token: process.env.BIMO_TOKEN!,
+  token: process.env.NEXUS_TOKEN!,
 });
 
 const remotes = await client.getRemotes();

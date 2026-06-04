@@ -12,37 +12,40 @@ There are two flavours of this:
 
 | Tool | Config file | When to use |
 |---|---|---|
-| `npm run dev:remote-one` in the `nexus` orchestrator | `nexus.dev.json` | Working in the `nexus-example` style monorepo |
+| `npm run dev:<remote>` in the `nexus` orchestrator | `nexus.dev.json` | Working with the NexusShop example monorepo |
 | `bnx dev` (CLI, recommended) | `nexus.config.json` | Any app — first-class multi-environment config |
 
 The flows look the same to the browser. Pick whichever matches the repo layout.
 
-## Quick start with `npm run dev:remote-one`
+## Quick start with `npm run dev:catalog`
 
 ```bash
-# In the nexus orchestrator repo
+# In the nexus orchestrator repo (nexus-example cloned as a sibling)
 git clone https://github.com/Bimo-dk/nexus.git
 cd nexus
 
 # nexus.dev.json is already configured
-npm run dev:remote-one
+npm run dev:catalog
 ```
 
 What happens:
 
-1. `dev-tools/switch-local.mjs remoteOne 8666` atomically rewrites the `local` block in `nexus.dev.json`.
+1. `dev-tools/switch-local.mjs catalog 8701` atomically rewrites the `local` block in `nexus.dev.json`.
 2. `concurrently` starts:
-   - `cd remote-one && npm start` (Angular dev server on :8666 with HMR)
+   - `cd ../nexus-example/remote-catalog && npm start` (Angular dev server on :8701 with HMR)
    - `npm run dev:proxy` (the nexus dev-proxy on :9000)
 3. You open http://localhost:9000.
 
-The browser sees the full app — host, layout, registry — from `nexus.dev.json#remote.url`, with `/remotes/remoteOne/*` going to `localhost:8666` instead.
+The browser sees the full NexusShop app — host, layout, registry — from `nexus.dev.json#remote.url`, with `/remotes/catalog/*` going to `localhost:8701` instead.
 
 ### Switching to another remote
 
 ```bash
-npm run dev:remote-two       # switch local to remote-two
+npm run dev:cart      # catalog local → cart local
+npm run dev:checkout  # cart local → checkout local
 ```
+
+Scripts available: `dev:catalog` (:8701), `dev:cart` (:8702), `dev:product` (:8703), `dev:checkout` (:8704), `dev:account` (:8705).
 
 Stop the current proc (`Ctrl+C`), then run the script for the remote you want. The proxy starts fresh against the new local.
 

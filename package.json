@@ -21,8 +21,11 @@
     "nexus:new": "cd nexus-tools && npx -y -p @angular-devkit/schematics-cli@latest schematics ./schematics/collection.json:generate-remote --dry-run=false",
 
     "dev:proxy": "cd dev-tools && npm start",
-    "dev:remote-one": "node dev-tools/switch-local.mjs remoteOne 8666 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd remote-one && npm start\" \"npm run dev:proxy\"",
-    "dev:remote-two": "node dev-tools/switch-local.mjs remoteTwo 8671 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd remote-two && npm start\" \"npm run dev:proxy\"",
+    "dev:catalog":  "node dev-tools/switch-local.mjs catalog  8701 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd ../nexus-example/remote-catalog  && npm start -- --port 8701\" \"npm run dev:proxy\"",
+    "dev:cart":     "node dev-tools/switch-local.mjs cart     8702 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd ../nexus-example/remote-cart     && npm start -- --port 8702\" \"npm run dev:proxy\"",
+    "dev:product":  "node dev-tools/switch-local.mjs product  8703 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd ../nexus-example/remote-product  && npm start -- --port 8703\" \"npm run dev:proxy\"",
+    "dev:checkout": "node dev-tools/switch-local.mjs checkout 8704 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd ../nexus-example/remote-checkout && npm start -- --port 8704\" \"npm run dev:proxy\"",
+    "dev:account":  "node dev-tools/switch-local.mjs account  8705 && npx -y concurrently -n REMOTE,PROXY -c green,blue \"cd ../nexus-example/remote-account  && npm start -- --port 8705\" \"npm run dev:proxy\"",
 
     "docs:install": "npm install --legacy-peer-deps",
     "docs:start": "docusaurus start",

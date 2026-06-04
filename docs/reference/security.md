@@ -32,7 +32,7 @@ Missing or wrong → `401 { error: "unauthorized" }`.
 | Host (Angular) | Built into the bundled `nexusAuthInterceptor`, overridable via `/assets/config.json#nexusToken` |
 | Portal (Angular) | Same as host |
 | Gateway | Read by Angular bundle for proxied calls; nginx itself does **not** check the token |
-| `bnx` CLI | `BIMO_TOKEN` env-var |
+| `bnx` CLI | `NEXUS_TOKEN` env-var |
 | `RegistryClient` (any Node tool) | Constructor option `token` |
 
 The Angular bundle's interceptor only adds the header for requests matching the registry origin — calls to unrelated origins are not tagged.
@@ -44,7 +44,7 @@ The token is shared state. To rotate:
 1. Pick the new token.
 2. Update `.env` (NEXUS_TOKEN) on the host running the orchestrator.
 3. `docker compose up -d --build` — every service that bakes the token rebuilds; runtime overrides via `/assets/config.json` are also re-substituted.
-4. Update any external tooling (`bnx`'s `BIMO_TOKEN`, CI secrets).
+4. Update any external tooling (`bnx`'s `NEXUS_TOKEN`, CI secrets).
 
 For zero-downtime rotation, the registry accepts a `NEXUS_TOKEN_NEXT` (planned, not yet implemented) — both are accepted during a transition window.
 

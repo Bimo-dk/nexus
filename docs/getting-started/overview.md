@@ -29,6 +29,10 @@ PUBLIC                       INTERNAL                    DEV-ONLY
 - All upstream services (`registry`, `host`, `remote-*`) are reached via Docker's internal network — never exposed.
 - The token (`X-Nexus-Token`) protects every write/read endpoint on the registry; only `/health` is public.
 
+## How gateway discovers remotes
+
+When gateway starts it fetches the full remote list from the registry and generates its nginx proxy routes. From that point it subscribes to the registry WebSocket — the same `/ws` the host uses. When a remote is added, toggled or removed, the registry broadcasts `remotes_changed`. Gateway regenerates its routes and calls `nginx -s reload`. No container restart, no config file to edit.
+
 ## Repository layout (multi-repo)
 
 Nexus is intentionally multi-repo so each piece has an independent lifecycle:
@@ -55,5 +59,7 @@ A product team creates **one repo per remote**, scaffolded from `nexus-remote-te
 - Reinvent the host layout — bootstrap with `provideNexusHost(...)`.
 - Wire up auth headers/correlation IDs — interceptors are bundled in `@bimo-dk/nexus-runtime`.
 - Restart anything to deploy a remote update — gateway, host and registry are unaware of remote container restarts.
+- Hand-edit nginx config to add a new remote — gateway discovers remotes from the registry automatically and reloads routing without downtime.
+- Set environment variables listing your remotes — name your Docker services whatever you want; the remote announces itself to the registry at startup.
 
 Read on with [installation](installation.md).

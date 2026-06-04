@@ -108,7 +108,7 @@ That's it. Federation, route registration, cache, error states, registry sync �
 | **Dev proxy** | Local hot-reload proxy — one remote local, everything else staging | [`nexus-proxy`](services/proxy.md) |
 | **Base image** | Shared Docker base for every service | [`nexus-base-image`](services/base-image.md) |
 | **Packages** | 7 published packages (core, client, build, runtime, ui, testing, cli) | [`nexus-packages`](packages/overview.md) |
-| **Example** | Runnable playground with 20+ demo components driven by catalog | [`nexus-example`](workflows/example-playground.md) |
+| **Example** | NexusShop — 5-remote webshop demo showing nexusRoute, `<nexus-component>` and cross-remote composition | [`nexus-example`](workflows/example-playground.md) |
 
 ---
 

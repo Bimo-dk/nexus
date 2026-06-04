@@ -14,8 +14,9 @@ sidebar_position: 5
 | `portal` | 80 | **8669** | yes — admin |
 | `registry` | 3000 | — | no |
 | `host` | 80 | — | no |
-| `remote-one` | 80 | — | no |
-| `remote-two` | 80 | — | no |
+| `remote-*` | 80 | — | no |
+
+Remotes in the NexusShop example: `remote-catalog`, `remote-cart`, `remote-product`, `remote-checkout`, `remote-account`.
 
 The browser only ever talks to `:8668` (app) and `:8669` (admin). Everything else is reached via gateway's reverse proxy.
 
@@ -35,8 +36,11 @@ The Angular dev-server ports below are not in compose; they are started by `npm 
 | `nexus-host-template` | 8667 |
 | `nexus-portal` | 8669 |
 | `nexus-remote-templat` | 8700 (placeholder — pick per remote) |
-| Example `remote-one` | 8666 |
-| Example `remote-two` | 8671 |
+| Example `remote-catalog` | 8701 |
+| Example `remote-cart` | 8702 |
+| Example `remote-product` | 8703 |
+| Example `remote-checkout` | 8704 |
+| Example `remote-account` | 8705 |
 | `nexus-proxy` (dev proxy) | 9000 |
 
 ## URL contract behind the gateway
@@ -48,8 +52,9 @@ These are the URL prefixes the gateway exposes. **Browser code must use these ex
 | `/api/*` | `registry:3000/api/*` | passthrough |
 | `/ws` | `registry:3000/ws` (websocket upgrade) | long-lived |
 | `/host/*` | `host:80/*` (prefix stripped) | per remoteEntry rules |
-| `/remotes/remoteOne/*` | `remote-one:80/*` | per remoteEntry rules |
-| `/remotes/remoteTwo/*` | `remote-two:80/*` | per remoteEntry rules |
+| `/remotes/catalog/*` | `remote-catalog:80/*` | per remoteEntry rules |
+| `/remotes/cart/*` | `remote-cart:80/*` | per remoteEntry rules |
+| `/remotes/<name>/*` | the remote's `UPSTREAM_URL` (from registry) | per remoteEntry rules |
 | `*remoteEntry.{js,json}` | local SPA assets | `no-store` |
 | `*chunk-*.js` | local SPA assets | `no-store` |
 | Other `.css/.js/.woff2/...` | local SPA assets | `immutable, max-age=31536000` |

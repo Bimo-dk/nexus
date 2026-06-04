@@ -11,7 +11,7 @@ End-to-end: from "I need a new remote" to a registered, deployable container.
 ## Pre-flight
 
 - A running registry the new remote can register against (local Docker stack, dev, staging — any).
-- `BIMO_TOKEN` matching the registry's `NEXUS_TOKEN`.
+- `NEXUS_TOKEN` matching the registry's `NEXUS_TOKEN`.
 - `@bimo-dk/nexus-cli` installed: `npm install -g @bimo-dk/nexus-cli`.
 - Auth to GitHub Packages so the build can install `@bimo-dk/*` — see [reference/security](../reference/security.md#github-packages-auth).
 
@@ -39,7 +39,9 @@ The scaffold contains:
 
 ## 2. Implement
 
-Edit `src/app/remote-entry/entry.component.ts`:
+Edit `src/app/remote-entry/entry.component.ts`.
+
+**Default export (scaffold default — no extra config needed):**
 
 ```ts
 import { Component, signal } from '@angular/core';
@@ -58,6 +60,27 @@ export default class CheckoutComponent {
   readonly total = signal(0);
 }
 ```
+
+`@NexusRemote()` with no options defaults `exposeAs` to `'RemoteEntry'`, which matches the scaffold's `federation.config.json` expose key `./RemoteEntry`. This is the zero-config path.
+
+**Named export (use when you expose the module under a custom key):**
+
+```ts
+import { Component, signal } from '@angular/core';
+import { NexusRemote } from '@bimo-dk/nexus-build';
+
+@NexusRemote({ exposeAs: 'CheckoutPage' })
+@Component({
+  selector: 'app-checkout',
+  standalone: true,
+  template: `<h1>Checkout</h1>`,
+})
+export class CheckoutPageComponent {
+  readonly total = signal(0);
+}
+```
+
+When `exposeAs` is set, the federation config exposes `./CheckoutPage` and the remote self-registers with `exposedModule: './CheckoutPage'`. Both the federation build and the registry entry stay in sync automatically.
 
 Add child routes, services, lazy modules — anything Angular allows. This file's class is what the host mounts.
 
@@ -93,7 +116,7 @@ Output: `dist/checkout/browser/`.
 ### Via CLI (recommended)
 
 ```bash
-export BIMO_TOKEN=<your-token>
+export NEXUS_TOKEN=<your-token>
 export REGISTRY_URL=http://localhost:8668
 export REMOTE_URL=/remotes/checkout/remoteEntry.json
 bnx publish
@@ -125,6 +148,8 @@ If you use `provideNexusRemote(...)` in `bootstrap.ts`, the remote calls `POST /
 2. Container starts, registers itself, host picks it up.
 3. No manual `bnx publish` needed.
 
+The remote reads `UPSTREAM_URL` from `/assets/config.json` and includes it in the `POST /api/remotes` payload. Gateway reads this field when generating its nginx proxy rules. If `UPSTREAM_URL` is not set, gateway cannot proxy to this remote — set it to the remote's internal Docker URL (e.g. `http://my-service-name:80`).
+
 ## 6. Verify
 
 ```bash
@@ -152,10 +177,28 @@ docker build \
 docker push my-registry/checkout:latest
 ```
 
-Then deploy it to wherever the rest of the stack runs (Compose, Swarm, k8s). The gateway routes `/remotes/checkout/*` to `checkout:80`.
+Then deploy it to wherever the rest of the stack runs. A minimal service definition:
 
-:::important
-The remote's container name on the docker network **must** match the `/remotes/<name>` segment in the gateway's `nginx.conf`. The default templates use `remote-one`, `remote-two`. For your new remote, you'll need to extend the gateway's nginx config to add `location ^~ /remotes/checkout/` — see [gateway docs](../services/gateway.md#adding-a-route-for-a-new-remote).
+```yaml
+# In your docker-compose.yml:
+checkout:
+  image: my-registry/checkout:latest
+  container_name: checkout
+  expose:
+    - "80"
+  environment:
+    REGISTRY_INTERNAL_URL: http://registry:3000
+    NEXUS_TOKEN: ${NEXUS_TOKEN}
+    PUBLIC_URL: /remotes/checkout/remoteEntry.json
+    UPSTREAM_URL: http://checkout:80
+  networks:
+    - nexus-net
+```
+
+The service name in docker-compose (`checkout`) does not need to match anything in the gateway. Only `UPSTREAM_URL` matters — that is what gateway proxies to.
+
+:::tip No gateway config needed
+Gateway discovers the new remote automatically when it registers itself at startup. Set `PUBLIC_URL` and `UPSTREAM_URL` in your container's environment and the gateway will proxy `/remotes/<name>/` to your service.
 :::
 
 ## Add a route inside the remote
@@ -175,10 +218,11 @@ The host already mounted you at `/checkout`, so internally your routes are `/che
 | Problem | Likely cause |
 |---|---|
 | Build fails on `nexus-build` with "no @NexusRemote found" | Your entry component is missing the decorator, or it lives outside `src/`. |
-| `POST /api/remotes` returns 401 | `BIMO_TOKEN` doesn't match the registry's `NEXUS_TOKEN`. |
+| `POST /api/remotes` returns 401 | `NEXUS_TOKEN` doesn't match the registry's `NEXUS_TOKEN`. |
 | `POST /api/remotes` returns 409 | A remote with that name already exists. Use `PUT` (or delete first). |
-| Host shows the remote in the sidebar but the route 404s | The federation entry returned 404 — check gateway's `nginx.conf` has a `/remotes/<name>/` block. |
-| Host shows "failed remote" with `loadRemoteModule` error | `remoteEntry.json` was reachable but `exposedModule` key is wrong. Verify `nexus-build` ran. |
+| Remote registered but gateway returns 502 | `UPSTREAM_URL` is wrong or the container is not on the nexus-net network. Check `docker compose logs gateway` for the nginx upstream error. |
+| Remote registered but gateway hasn't reloaded yet | Gateway reloads on `remotes_changed` — wait 1-2 seconds. If it never reloads, check `docker compose logs gateway` for WebSocket connection errors to the registry. |
+| Host shows "failed remote" with `loadRemoteModule` error | `remoteEntry.json` was reachable but `exposedModule` key is wrong. Verify `nexus-build` ran and that `exposeAs` in the decorator matches the key in `federation.config.json`. |
 
 ## Related
 

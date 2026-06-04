@@ -24,7 +24,7 @@ The traditional micro-frontend dev story is painful:
 Within five minutes you've spent an afternoon on plumbing. The Nexus dev proxy collapses it to:
 
 ```bash
-npm run dev:remote-one
+npm run dev:catalog
 ```
 
 You see the entire app, but only your remote is local.
@@ -32,17 +32,19 @@ You see the entire app, but only your remote is local.
 ## How it works
 
 ```
-browser ──────► localhost:9000 (proxy)
+browser ──────► localhost:9000 (dev proxy)
                   │
-   /remotes/remoteOne/* ──► localhost:8666  (your ng serve, with HMR)
-   /remotes/remoteTwo/* ──► <shared env>
-   /host/*              ──► <shared env>
-   /api/*               ──► <shared env>
-   /ws                  ──► <shared env>  (websocket upgrade)
-   everything else      ──► <shared env>
+   /remotes/catalog/* ──► localhost:8700  (your local ng serve, HMR)
+   /remotes/*/         ──► <shared env>   (all other remotes, auto-discovered)
+   /host/*             ──► <shared env>
+   /api/*              ──► <shared env>
+   /ws                 ──► <shared env>   (websocket upgrade)
+   everything else     ──► <shared env>
 ```
 
 The proxy is a small Express server using `http-proxy-middleware`. It reads `nexus.dev.json`, maps every `local` remote to a local port, and forwards everything else to `remote.url`.
+
+The proxy fetches the remote list from the registry at startup and creates routes for all enabled remotes. Only the ones listed in `local` are intercepted to your machine — everything else forwards to the shared env.
 
 ## Configuration — `nexus.dev.json`
 
@@ -50,7 +52,7 @@ The proxy is a small Express server using `http-proxy-middleware`. It reads `nex
 {
   "proxyPort": 9000,
   "local": {
-    "remoteOne": 8666
+    "catalog": 8700
   },
   "remote": {
     "url": "http://localhost:8668"
@@ -58,6 +60,8 @@ The proxy is a small Express server using `http-proxy-middleware`. It reads `nex
   "logRouting": true
 }
 ```
+
+Only list the remote you are actively developing in `local`. All other remotes from the registry are forwarded to `remote.url` automatically — you don't need to list them.
 
 | Field | Description |
 |---|---|
@@ -67,7 +71,7 @@ The proxy is a small Express server using `http-proxy-middleware`. It reads `nex
 | `remote.registryApiPath` | Default `/api`. Override if the staging registry lives elsewhere. |
 | `logRouting` | `true` to log every request's destination. |
 
-The CLI helper `dev-tools/switch-local.mjs` rewrites the `local` block atomically — used by the npm scripts so you can do `npm run dev:remote-two` without manually editing JSON.
+The CLI helper `dev-tools/switch-local.mjs` rewrites the `local` block atomically — used by the npm scripts so you can do `npm run dev:cart` without manually editing JSON.
 
 ## Token & correlation passthrough
 
@@ -87,7 +91,7 @@ Restart the proxy. Now your local remote hits the staging registry, host and oth
 
 ## Hot reload
 
-When you edit code in the locally running remote (e.g. `remote-one/src/...`), Angular's dev server reloads. The proxy does not need a restart — it does not read files; it only proxies URLs.
+When you edit code in the locally running remote (e.g. `remote-catalog/src/...`), Angular's dev server reloads. The proxy does not need a restart — it does not read files; it only proxies URLs.
 
 If you edit code on the proxy itself, restart it with `Ctrl+C` and re-run the npm script.
 
@@ -103,7 +107,7 @@ In the `nexus` orchestrator's root `package.json`:
 }
 ```
 
-`switch-local.mjs` accepts `<name> <port>` and atomically rewrites the `local` block to that one entry.
+`switch-local.mjs` accepts `<name> <port>` and atomically rewrites the `local` block to that one entry. You do not need to add anything else — all other remotes in the registry are forwarded to the shared env automatically.
 
 ## Output
 
@@ -114,10 +118,10 @@ In the `nexus` orchestrator's root `package.json`:
 │  Listening:  http://localhost:9000
 │  Shared:     http://localhost:8668
 │  Local:
-│    /remotes/remoteOne/* -> http://localhost:8666
+│    /remotes/catalog/* -> http://localhost:8701
 ╰───────────────────────────────────────────────────────────
 
-[nexus-proxy] GET    /remotes/remoteOne/remoteEntry.json     -> LOCAL remoteOne (http://localhost:8666)
+[nexus-proxy] GET    /remotes/catalog/remoteEntry.json       -> LOCAL catalog (http://localhost:8701)
 [nexus-proxy] GET    /host/remoteEntry.json                  -> SHARED (http://localhost:8668)
 [nexus-proxy] POST   /api/remotes                            -> SHARED (http://localhost:8668)
 ```

@@ -35,14 +35,18 @@ registry:3000
   │  - returns enabled remotes
   │  - keeps WS open for live updates
   │
-  │ 5. For each remote:
-  │      GET /remotes/<name>/remoteEntry.json  (proxied to remote-<name>:80)
+  │ 5. For each remote, gateway proxies by upstreamUrl from registry:
+  │      GET /remotes/<name>/remoteEntry.json  →  remote's upstreamUrl
   │
   ▼
-remote-one:80    remote-two:80    ...
+remote-catalog:80    remote-cart:80    ...
 ```
 
 Everything that the browser sees is `localhost:8668` — the gateway hides all upstream services behind a single nginx reverse-proxy.
+
+The gateway nginx proxy routes are not static. At startup, gateway reads `GET /api/remotes` from the registry and generates location blocks for every enabled remote, using the remote's `upstreamUrl` field as the nginx upstream. When the registry broadcasts `remotes_changed`, gateway regenerates the routes and issues `nginx -s reload` — a graceful reload that does not drop in-flight requests.
+
+This means remote containers can be named anything on the Docker network. The coupling between public path (`/remotes/catalog/`) and internal service name (`http://whatever-you-called-it:80`) lives only in the remote's own environment variables, not in the gateway config.
 
 ## Two timelines: cold start vs. live update
 
@@ -54,8 +58,8 @@ T+50 ms  browser   GET /assets/config.json        gateway
 T+100ms  browser   GET /host/remoteEntry.json     gateway → host
 T+150ms  host      GET /api/remotes               registry
 T+200ms  host      WS  /ws (subscribe)            registry
-T+250ms  host      loadRemoteModule(remoteOne)
-T+300ms  browser   GET /remotes/remoteOne/...     gateway → remote-one
+T+250ms  host      loadRemoteModule(catalog)
+T+300ms  browser   GET /remotes/catalog/...       gateway → remote-catalog
 ```
 
 ### Live add (operator opens portal and adds a remote)
@@ -95,7 +99,7 @@ No reload, no container restart, no downtime.
                                   └───────────────────┘
 ```
 
-In production each remote is its own container, deployed by its team's CI. The `nexus` orchestrator references them by `build:` context (for dev) or `image:` reference (for prod pulls). Either way the docker network internal name (`host`, `remote-one`, ...) is what `nexus-gateway/nginx.conf` proxies to.
+In production each remote is its own container, deployed by its team's CI. The `nexus` orchestrator references them by `build:` context (for dev) or `image:` reference (for prod pulls). Gateway reads each remote's `UPSTREAM_URL` from the registry and proxies to that address — the Docker service name can be anything.
 
 ## Why a gateway in front of host?
 
@@ -121,7 +125,7 @@ The registry is the only stateful component. Its disk is the source of truth.
 
 There are two HTTP layers in the request graph. They are both built from the same building blocks but have different roles:
 
-1. **gateway/nginx** — opaque reverse proxy, no Angular runtime knowledge. Routes by URL prefix.
+1. **gateway/nginx** — opaque reverse proxy. Routes by URL prefix. Proxy rules are generated dynamically from registry data at startup and reloaded on every `remotes_changed` broadcast — no hardcoded remote names.
 2. **host/Angular** — runtime federation loader. Reads `/api/remotes`, loads each entry, calls `provideRouter` for each route.
 
 This separation means an operator can change which remotes are live (registry change → broadcast → host re-route) without ever touching the nginx layer.
@@ -146,6 +150,7 @@ Every registry log line and error response carries the correlation id, so a fail
 | Registry container dies | Existing browser tabs keep working (cached remotes). New tabs see a backup file or empty list. | Restart `registry`. WebSocket auto-reconnects with exponential backoff. |
 | Gateway container dies | Total outage — there is no upstream visible to the browser. | Restart `gateway`. |
 | Disk full on registry volume | Writes start to fail with 5xx. Reads still work. | Increase volume, drain registry. |
+| Gateway nginx reload fails | Routes stay as they were before reload. | Check nginx error log: `docker compose logs gateway`. Registry still has the new remote — retry is automatic on next `remotes_changed`. |
 
 The host has a three-layer fallback chain for registry reads:
 
