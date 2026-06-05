@@ -75,6 +75,13 @@ ALLOWED_ORIGINS=http://localhost:8668,http://localhost:8669
 
 # GitHub Packages auth. Needed by any image that installs @bimo-dk/* packages.
 NODE_AUTH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+# Portal session cookie signing secret. Random ≥32 bytes.
+PORTAL_SESSION_SECRET=$(openssl rand -hex 32)
+
+# Portal first-run admin password. Required ONLY before the SQLite users
+# table has any rows. Unset after the first admin login + password change.
+PORTAL_INITIAL_PASSWORD=changeme-on-first-login
 ```
 
 :::important
@@ -139,7 +146,11 @@ When the container starts, the framework adapter POSTs the remote to the registr
 
 ### Manual (via portal)
 
-Open http://localhost:8669, navigate to **Remotes → Add remote**, and fill in `name`, `url`, `upstreamUrl`, `exposedModule`, and `routePath`. The host receives a WebSocket broadcast and registers the route within seconds.
+Open http://localhost:8669 — you will land on the portal's **login page**. Sign in as `admin` with the value you set in `PORTAL_INITIAL_PASSWORD`. The portal forces you to change the password before continuing; once changed, you can unset `PORTAL_INITIAL_PASSWORD` from `.env` (it is only read when the users table is empty).
+
+Navigate to **Remotes → Add remote**, and fill in `name`, `url`, `upstreamUrl`, `exposedModule`, and `routePath`. The host receives a WebSocket broadcast and registers the route within seconds.
+
+To create a read-only `developer` user, go to **Users → Add user**.
 
 ## Install the CLI
 
@@ -165,9 +176,11 @@ The CLI authenticates against the registry via `NEXUS_TOKEN` and `REGISTRY_URL` 
 
 | Variable | Read by | Default |
 |---|---|---|
-| `NEXUS_TOKEN` | registry, host, portal, remotes | none — required |
+| `NEXUS_TOKEN` | registry, host, portal BFF, remotes | none — required |
 | `ALLOWED_ORIGINS` | registry CORS | `*` |
 | `NODE_AUTH_TOKEN` | Docker build (BuildKit secret) | none — required to install packages |
+| `PORTAL_SESSION_SECRET` | portal BFF | none — required |
+| `PORTAL_INITIAL_PASSWORD` | portal BFF | none — required on first boot only |
 | `PORT` | registry | `8670` |
 | `BIND_ADDRESS` | registry | `0.0.0.0` |
 | `DATABASE_URL` | registry | `sqlite:./data/registry.db` |

@@ -24,7 +24,7 @@ docker compose up --build
 - **Cross-team component catalog.** `@NexusComponent` (Angular) or the `catalog` field on `nexusVite` (Vue / React) populates a discoverable inventory in the portal.
 - **Zero-downtime deploys.** Gateway hot-swaps routes; cache rules on `remoteEntry.json` and `chunk-*.js` mean a new bundle is visible the instant a container is up.
 - **Three-layer fallback for the host.** Live registry → `sessionStorage` cache → static backup JSON. Open browser tabs survive a 30-minute registry outage.
-- **Secure by default.** `X-Nexus-Token` on every endpoint with rotation + grace period. BuildKit secrets for GitHub Packages auth — tokens never end up in image layers.
+- **Secure by default.** Machine-to-machine: `X-Nexus-Token` on every endpoint with rotation + grace period. Human-to-portal: username/password login backed by SQLite, role-based access (admin / developer), httpOnly session cookies — the registry token is held server-side and never reaches the browser. BuildKit secrets for GitHub Packages auth — tokens never end up in image layers.
 - **Observable.** Prometheus `/metrics` on both registry and gateway. Per-request correlation IDs. Ring-buffered logs streamed over the WebSocket.
 
 > 📚 **Documentation:** generated from [`docs/`](./docs/) (Docusaurus) and deployed to GitHub Pages by [`.github/workflows/deploy-docs.yml`](./.github/workflows/deploy-docs.yml).
@@ -74,7 +74,7 @@ That's it. Federation, registration, route propagation, gateway proxy, cache, fa
 | `nexus/` (you are here) | Orchestrator + docs site (Docusaurus) | docker-compose, scripts |
 | `nexus-gateway/` | Public ingress, hot-swap routing, 7-layer protection | Rust + axum + hyper |
 | `nexus-registry/` | Source of truth for hosts, gates, remotes, config | Rust + axum + sqlx |
-| `nexus-portal/` | Admin UI — compact, dark/light, live | Angular 19 |
+| `nexus-portal/` | Admin UI with auth/RBAC BFF — compact, dark/light, live | Angular 19 + Fastify + SQLite |
 | `nexus-host-template/` | Angular host scaffold | Angular 19 |
 | `nexus-host-template-vue/` | Vue host scaffold | Vue 3 |
 | `nexus-remote-templat/` | Angular remote scaffold | Angular 19 |

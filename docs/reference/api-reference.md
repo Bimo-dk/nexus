@@ -17,9 +17,10 @@ Every HTTP endpoint exposed by Nexus.
 ## Conventions
 
 - Base URL: `http://localhost:8668/api/*` (in production: `https://your-gateway/api/*`).
-- Auth: `X-Nexus-Token` header on every `/api/*` request. `/health` is public on every service.
+- Auth (registry, gateway, host): `X-Nexus-Token` header on every `/api/*` request. `/health` is public on every service.
+- Auth (portal BFF — `/api/auth/*`, `/api/users`, `/api/ws`, and the proxied `/api/*` calls reaching the registry): session cookie (`nexus_session`, httpOnly, signed, `SameSite=Lax`). Issued by `POST /api/auth/login`. The portal BFF attaches `X-Nexus-Token` server-side when forwarding to the registry; the browser never sees the token.
 - Correlation: include `X-Request-ID` (ULID or UUIDv4) for tracing. The server generates one if absent.
-- Errors: `{ "error": "<code>", "message": "<human>", "correlationId": "<id>" }`.
+- Errors: `{ "error": "<code>", "message": "<human>", "correlationId": "<id>" }`. Portal BFF errors use a shorter shape: `{ "error": "<human>", "code"?: "<machine>" }`.
 
 ## Registry — health
 
@@ -227,6 +228,54 @@ Returns `{ unbanned, was_banned }`.
 ### DELETE /api/protection/bans
 
 Clears every ban. Returns `{ cleared }`.
+
+## Portal BFF — authentication
+
+All endpoints on the portal BFF authenticate by session cookie. The BFF itself does not accept `X-Nexus-Token` from the browser; it injects the token server-side when proxying to the registry.
+
+### POST /api/auth/login
+
+Body: `{ "username": string, "password": string }`.
+
+Sets the `nexus_session` cookie on success. Returns `{ username, role, must_change_password }`. On bad credentials: `401 { error: "invalid credentials" }`.
+
+### POST /api/auth/logout
+
+Deletes the server-side session row and clears the cookie. Returns `{ status: "ok" }`.
+
+### GET /api/auth/me
+
+Returns `{ username, role, must_change_password }` for the current session, or `401` if no valid session.
+
+### POST /api/auth/change-password
+
+Body: `{ "current_password": string, "new_password": string }`. New password must be at least 8 characters.
+
+The only endpoint a user with `must_change_password=true` can call (other than `/api/auth/me` and `/api/auth/logout`). Every other endpoint returns `403 { error: "password change required", code: "must_change_password" }` until the user changes their password.
+
+## Portal BFF — users (admin-only)
+
+All endpoints require role `admin`. Developer-role sessions get `403 { error: "insufficient permissions" }`.
+
+### GET /api/users
+
+Returns `User[]` with `{ id, username, role, must_change_password, created_at, last_login_at }`.
+
+### POST /api/users
+
+Body: `{ "username": string, "password": string, "role": "admin" | "developer" }`. Password ≥ 8 characters.
+
+Created users always start with `must_change_password=true`.
+
+Returns the new user. Conflicts on duplicate username return `409`.
+
+### PATCH /api/users/`{id}`
+
+Body: `{ "password"?: string, "role"?: "admin" | "developer" }`. Updating the password clears `must_change_password`. Returns the updated user.
+
+### DELETE /api/users/`{id}`
+
+Deletes the user and revokes all their sessions. Returns `{ status: "ok" }`. An admin cannot delete their own account (`400`).
 
 ## Error codes
 

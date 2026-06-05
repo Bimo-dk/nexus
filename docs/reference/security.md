@@ -15,9 +15,18 @@ keywords:
 
 This page is the platform-level security reference. For protection layer operations, see [infra-protection](../infrastructure/infra-protection.md).
 
+## Auth boundaries
+
+Nexus has two distinct auth surfaces:
+
+- **Machine-to-machine** — every direct call to the registry, gateway, host, or remote APIs uses the shared secret `NEXUS_TOKEN` in the `X-Nexus-Token` header. This is how the gateway authenticates to the registry, how `bnx` talks to the registry, and how the portal BFF forwards to the registry. Treat the token like a database password.
+- **Human-to-portal** — the admin portal is gated by username/password login, session cookies, and role-based access (admin / developer). The `NEXUS_TOKEN` for the registry is held inside the portal BFF's environment and is never sent to the browser.
+
+The rest of this section covers the machine token. For the portal's auth model, see [Infra: portal — Authentication](../infrastructure/infra-portal.md#authentication).
+
 ## Token model
 
-Today's model is **single shared secret**: `NEXUS_TOKEN` is required for every `/api/*` call. Anyone with the token can mutate every host, gate, remote, and configuration setting. Treat it like a database password.
+The machine token model is **single shared secret**: `NEXUS_TOKEN` is required for every `/api/*` call to the registry, gateway, and host. Anyone with the token can mutate every host, gate, remote, and configuration setting. Treat it like a database password.
 
 ### Rotation
 
@@ -46,7 +55,9 @@ Tokens are stored as HMAC-SHA256 hashes with a `NEXUS_TOKEN_PEPPER`. Set the pep
 
 ### What's on the roadmap
 
-Per-identity tokens with role-based scopes (`read:remotes`, `write:hosts`, …). Not shipped today.
+Per-identity machine tokens with role-based scopes (`read:remotes`, `write:hosts`, …) for direct API calls. Not shipped today — the machine token remains a single shared secret.
+
+Per-identity RBAC for the **portal** (admin vs developer, password-backed login) **is** shipped. See [Infra: portal — Authentication](../infrastructure/infra-portal.md#authentication).
 
 ## CORS
 
