@@ -318,6 +318,17 @@ graph TB
 
 ---
 
+## For contributors to the platform
+
+Inside the Rust services — module layout, shared state, concurrency rules, hot paths.
+
+- **[Gateway internals — architecture](internals/nexus-gateway/architecture.md)** · **[code map](internals/nexus-gateway/code-map.md)**
+- **[Registry internals — architecture](internals/nexus-registry/architecture.md)** · **[code map](internals/nexus-registry/code-map.md)**
+
+More services land here as the rest of the workspace is documented.
+
+---
+
 ## License and source
 
 MIT-licensed. Source code: https://github.com/Bimo-dk/nexus. Built and maintained by [Bimo](https://bimo.dk).

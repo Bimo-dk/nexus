@@ -69,21 +69,25 @@ That's it. Federation, registration, route propagation, gateway proxy, cache, fa
 
 ## Repos in this workspace
 
-| Folder | Role | Stack |
+Each row is a separate GitHub repo under [Bimo-dk](https://github.com/Bimo-dk). They are cloned side-by-side into one working directory; the `push-all.ps1` script at workspace root pushes branches across all of them.
+
+| Repo | Role | Stack |
 |---|---|---|
-| `nexus/` (you are here) | Orchestrator + docs site (Docusaurus) | docker-compose, scripts |
-| `nexus-gateway/` | Public ingress, hot-swap routing, 7-layer protection | Rust + axum + hyper |
-| `nexus-registry/` | Source of truth for hosts, gates, remotes, config | Rust + axum + sqlx |
-| `nexus-portal/` | Admin UI with auth/RBAC BFF — compact, dark/light, live | Angular 19 + Fastify + SQLite |
-| `nexus-host-template/` | Angular host scaffold | Angular 19 |
-| `nexus-host-template-vue/` | Vue host scaffold | Vue 3 |
-| `nexus-remote-templat/` | Angular remote scaffold | Angular 19 |
-| `nexus-remote-templat-vue/` | Vue remote scaffold | Vue 3 |
-| `nexus-remote-templat-react/` | React remote scaffold | React 18 |
-| `nexus-proxy/` | Dev-time hot-reload proxy | Node |
-| `nexus-base-image/` | Shared Docker base layer | node:22-alpine + nginx |
-| `nexus-packages/` | Turborepo with 10 `@bimo-dk/*` SDK packages | TypeScript |
-| `nexus-example/` | NexusShop demo — 5-remote webshop | Angular |
+| [`nexus`](https://github.com/Bimo-dk/nexus) (you are here) | Orchestrator + docs site (Docusaurus) | docker-compose, scripts |
+| [`nexus-gateway`](https://github.com/Bimo-dk/nexus-gateway) | Public ingress, hot-swap routing, 7-layer protection | Rust + axum + hyper |
+| [`nexus-registry`](https://github.com/Bimo-dk/nexus-registry) | Source of truth for hosts, gates, remotes, config | Rust + axum + sqlx |
+| [`nexus-portal`](https://github.com/Bimo-dk/nexus-portal) | Admin UI with auth/RBAC BFF — compact, dark/light, live | Angular 19 + Fastify + SQLite |
+| [`nexus-host-template`](https://github.com/Bimo-dk/nexus-host-template) | Angular host scaffold | Angular 19 |
+| [`nexus-host-template-vue`](https://github.com/Bimo-dk/nexus-host-template-vue) | Vue host scaffold | Vue 3 |
+| [`nexus-host-template-react`](https://github.com/Bimo-dk/nexus-host-template-react) | React host scaffold | React 18 |
+| [`nexus-remote-templat`](https://github.com/Bimo-dk/nexus-remote-templat) | Angular remote scaffold | Angular 19 |
+| [`nexus-remote-templat-vue`](https://github.com/Bimo-dk/nexus-remote-templat-vue) | Vue remote scaffold | Vue 3 |
+| [`nexus-remote-templat-react`](https://github.com/Bimo-dk/nexus-remote-templat-react) | React remote scaffold | React 18 |
+| [`nexus-proxy`](https://github.com/Bimo-dk/nexus-proxy) | Dev-time hot-reload proxy | Node |
+| [`nexus-base-image`](https://github.com/Bimo-dk/nexus-base-image) | Shared Docker base layer | node:22-alpine + nginx |
+| [`nexus-packages`](https://github.com/Bimo-dk/nexus-packages) | Turborepo with 10 `@bimo-dk/*` SDK packages | TypeScript |
+| [`nexus-cli`](https://github.com/Bimo-dk/nexus-cli) | `bnx` CLI — generate, publish, dev, status, health | Node |
+| [`nexus-example`](https://github.com/Bimo-dk/nexus-example) | NexusShop demo — 5-remote webshop | Angular |
 
 ---
 
@@ -104,6 +108,7 @@ That's it. Federation, registration, route propagation, gateway proxy, cache, fa
 | [Workflows](./docs/workflows/create-remote-angular.md) | Create per framework, dev mode, zero-downtime, multi-domain, protection |
 | [Reference](./docs/reference/environment.md) | Env vars, config, HTTP API, WebSocket messages, security, troubleshooting |
 | [Compare](./docs/compare/compare-module-federation.md) | vs Module Federation, single-spa, Bit, Nx monorepo |
+| [Internals](./docs/internals/nexus-gateway/architecture.md) | Per-service module layout and code maps — for contributors changing the Rust services |
 
 ---
 
