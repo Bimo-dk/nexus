@@ -42,13 +42,21 @@ The complete table of environment variables every Nexus service honors. Anything
 
 ## Portal (`nexus-portal`)
 
-Read at container startup by `docker-entrypoint.sh` and substituted into `assets/config.json`.
+Read by the Fastify BFF at startup. The portal container runs Node 22, not nginx; there is no `assets/config.json` substitution.
 
-| Variable | Default | Purpose |
-|---|---|---|
-| `REGISTRY_URL` | `/api` | Base URL the portal calls. |
-| `WS_URL` | `/ws` | WebSocket path. |
-| `NEXUS_TOKEN` | empty | Pre-populated token (optional). User can override in UI. |
+| Variable | Default | Validation | Purpose |
+|---|---|---|---|
+| `SESSION_SECRET` | none | required, non-empty | Secret used to sign session cookies. Rotate by restart — invalidates all active sessions. Generate with `openssl rand -hex 32`. |
+| `NEXUS_TOKEN` | none | required, non-empty | Registry token. Held server-side and attached as `X-Nexus-Token` on every proxied call. Never sent to the browser. |
+| `NEXUS_INITIAL_PASSWORD` | none | required ONLY when `users` table is empty | Seed password for the initial `admin` user. Forces password change at first login. Server refuses to start without it on an empty DB. |
+| `DATABASE_PATH` | `/data/portal.db` | absolute path | SQLite file. Mount a named volume at `/data` so users survive restarts. |
+| `SESSION_TTL_SECONDS` | `43200` (12 h) | positive integer | Session cookie + DB row lifetime. |
+| `REGISTRY_URL` | `http://registry:8670` | URL | Where the BFF forwards `/api/registry/*` calls. |
+| `GATEWAY_URL` | `http://gateway:80` | URL | Where the BFF forwards `/remotes/*/{catalog,remoteEntry}.json` calls. |
+| `PORT` | `8080` | 1–65535 | Listen port. Container Dockerfile overrides to `80`. |
+| `HOST` | `0.0.0.0` | IPv4 / IPv6 literal | Listen interface. |
+| `STATIC_DIR` | `/app/dist/manager/browser` | absolute path | Where the compiled Angular bundle lives in the container. |
+| `LOG_LEVEL` | `info` | pino level | BFF log level. Cookie + token headers are auto-redacted. |
 
 ## Host (Angular and Vue templates)
 

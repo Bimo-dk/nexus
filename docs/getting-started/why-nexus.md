@@ -65,10 +65,10 @@ sequenceDiagram
   participant H as Host (browser tab)
   participant G as Gateway
 
-  Team->>CI: docker push ghcr.io/teamA/checkout:1.4.2
+  Team->>CI: docker push ghcr.io/teamA/checkout 1.4.2
   CI->>R: container boots, POST /api/remotes
-  R-->>G: WebSocket: remotes_changed
-  R-->>H: WebSocket: remotes_changed
+  R-->>G: WS remotes_changed
+  R-->>H: WS remotes_changed
   G->>G: hot-swap route table (sub-ms)
   H->>H: add route, no reload
   Note right of H: User navigates to /checkout<br/>new bundle served from new container

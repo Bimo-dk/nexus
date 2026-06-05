@@ -21,37 +21,41 @@ Published image: `ghcr.io/bimo-dk/nexus-base:latest` (also versioned `:1.0`, `:1
 ## What's in it
 
 ```dockerfile
-FROM node:22-bookworm-slim
-
-RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates git wget \
- && rm -rf /var/lib/apt/lists/*
-
-RUN npm install -g npm@10
-
+# Build-stage base: Node 22 + git + wget + curl + bash
+FROM node:22-alpine AS bimo-nexus-builder
+RUN apk add --no-cache git wget curl bash
 WORKDIR /app
+RUN mkdir -p /app/src /app/public
+
+# Runtime-stage base: nginx-alpine + wget + curl + healthcheck
+FROM nginx:alpine AS bimo-nexus-runtime
+RUN apk add --no-cache wget curl
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+  CMD wget -qO- http://localhost/health || exit 1
 ```
 
-That's it. The point is *reproducibility*: every service depends on the same Node 22 patch level, the same npm 10 patch level, and the same OS package set.
+Two stages, two roles. The build stage compiles your application; the runtime stage serves the static output. Every service depends on the same Node 22 patch level, the same nginx-alpine base, and the same set of system tools — so a build that works on one service reproduces on every other.
 
 ## How services use it
 
-Every Nexus service (host template, remote templates, portal) starts its Dockerfile with:
+Every Nexus SPA service (host templates, remote templates, portal) chains the two stages:
 
 ```dockerfile
 # syntax=docker/dockerfile:1.6
-FROM ghcr.io/bimo-dk/nexus-base:latest AS build
+FROM ghcr.io/bimo-dk/nexus-base:22-alpine AS bimo-nexus-builder AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci --prefer-offline
 COPY . .
 RUN npm run build
 
-FROM nginx:1.27-alpine
+FROM ghcr.io/bimo-dk/nexus-base:22-alpine AS bimo-nexus-runtime
 COPY --from=build /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
 ```
 
-The runtime stage is service-specific (nginx for SPAs, distroless for Rust). The build stage is always `nexus-base`.
+Rust services (registry, gateway) don't use this base — they have their own multi-stage `rust:1.83` → `distroless/cc` Dockerfile.
 
 ## Build
 

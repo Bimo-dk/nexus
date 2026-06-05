@@ -15,24 +15,27 @@ keywords:
 
 The portal is the admin application for a Nexus platform instance. Everything that the registry stores is editable from this UI. Operators use it to add and remove micro frontends; developers use it to inspect health and rotate tokens; SREs use it to tune protection settings under load.
 
-Code: `nexus-portal/`. Stack: Angular 19 standalone components, Angular Material, the `@bimo-dk/nexus-runtime` and `@bimo-dk/nexus-client` packages.
+Code: `nexus-portal/`. Stack: Angular 19 standalone components and Angular Material on the browser side; Node 22 + Fastify + better-sqlite3 + bcrypt on the BFF side, both shipped in the same container. The Angular bundle and the BFF live in the same repo and the same Docker image.
 
 ## Layout
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Sidebar           │ Top bar (env, registry status, theme)   │
+│ Sidebar           │ Top bar (registry status, theme, user)  │
 │                   ├─────────────────────────────────────────┤
 │ • Overview        │                                         │
-│ • Hosts           │            Active page                  │
-│ • Gates           │                                         │
+│ • Hosts*          │            Active page                  │
+│ • Gates*          │                                         │
 │ • Remotes         │                                         │
 │ • Catalog         │                                         │
-│ • Protection      │                                         │
-│ • Config          │                                         │
-│ • Logs            │                                         │
-│ • System          │                                         │
+│ • Protection*     │                                         │
+│ • Config*         │                                         │
+│ • Logs*           │                                         │
+│ • System*         │                                         │
+│ • Users*          │                                         │
 └───────────────────┴─────────────────────────────────────────┘
+
+`*` marks pages that only `admin` users can see.
 ```
 
 The compact developer-oriented design follows the Datadog / Grafana aesthetic: dense rows, monospace numerals, small typography, sparklines where relevant, no chrome that isn't load-bearing.
@@ -72,16 +75,15 @@ See [infra-protection](infra-protection.md) for the operations playbook.
 
 ### Config
 
-Inline editors for the registry's six runtime-configurable features:
+Inline editors for the registry's runtime-configurable features:
 
 - Rate limiting (registry's own ingress)
 - WebSocket reconnect policy (broadcast to every client)
 - Circuit breaker for health checks
 - Graceful shutdown timings
 - Prometheus metrics
-- Token rotation (separate page with grace-period UX)
 
-Every change PUTs to `/api/config/*` and the registry validates server-side before applying.
+Every change PUTs to `/api/config/*` and the registry validates server-side before applying. The page is admin-only.
 
 ### Logs
 
@@ -97,9 +99,34 @@ Dark and light mode. The default is `system` (respects `prefers-color-scheme`), 
 
 ## Authentication
 
-`X-Nexus-Token` is read from `localStorage` on bootstrap. The portal challenges the user for it once and remembers it for the session. Rotate via the Config page; the portal handles the grace-period transition transparently.
+The portal is gated by username/password login backed by a SQLite database (`/data/portal.db` in the container). The BFF handles every credential — the browser holds only an httpOnly signed session cookie. The registry token (`NEXUS_TOKEN`) lives in the BFF's environment and is never sent to the browser.
 
-This is a single-tenant model: anyone with the token has full write access. Per-identity RBAC is on the roadmap.
+### First-run
+
+There are no default credentials. When the SQLite file is empty, the portal will refuse to start unless `NEXUS_INITIAL_PASSWORD` is set. If set, it seeds an `admin` user with that password and forces a password change at first login. After that login, the env-var can be unset.
+
+### Roles
+
+Two built-in roles, stored in a `roles` table (so a third role is a data change, not a schema migration):
+
+| Role | Can see | Can edit |
+|---|---|---|
+| `admin` | everything | everything |
+| `developer` | Remotes (list + detail), Catalog | nothing — read-only |
+
+Route guards (`authGuard`, `adminGuard`) hide non-developer pages from the developer's sidebar entirely. The BFF enforces the same rules server-side: a developer hitting a write endpoint gets `403`, even if the UI somehow allowed the call.
+
+### Sessions
+
+Login issues an httpOnly signed cookie (`nexus_session`, `SameSite=Lax`, `Secure` in production). The session row also lives in SQLite, so logout invalidates server-side and an admin can revoke a user's sessions by deleting them from the Users page. Session lifetime defaults to 12 hours, configurable via `SESSION_TTL_SECONDS`.
+
+### Token rotation
+
+The registry token is no longer something a user rotates from the UI. Update `NEXUS_TOKEN` in the portal container's environment and restart. Rotating the session signing secret (`SESSION_SECRET`) on restart invalidates all active sessions (planned logout-all model).
+
+### Users page
+
+Admin-only. Create users with username, temporary password, and role. Newly created users are forced to change password at first login. Reset password and delete actions live in the same table.
 
 ## Real-time updates
 

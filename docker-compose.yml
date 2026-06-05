@@ -116,12 +116,20 @@ services:
     build:
       context: ../nexus-portal
       args:
-        NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
         NODE_AUTH_TOKEN: ${NODE_AUTH_TOKEN}
     image: nexus-portal:latest
     container_name: nexus-portal
     ports:
       - "8669:80"
+    environment:
+      NODE_ENV: production
+      NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
+      REGISTRY_URL: http://registry:8670
+      GATEWAY_URL: http://gateway:80
+      SESSION_SECRET: ${PORTAL_SESSION_SECRET:?PORTAL_SESSION_SECRET must be set in .env or environment}
+      NEXUS_INITIAL_PASSWORD: ${PORTAL_INITIAL_PASSWORD:-}
+    volumes:
+      - portal-data:/data
     depends_on:
       registry:
         condition: service_healthy
@@ -131,6 +139,8 @@ services:
 
 volumes:
   registry-data:
+    driver: local
+  portal-data:
     driver: local
 
 networks:

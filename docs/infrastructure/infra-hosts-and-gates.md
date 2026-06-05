@@ -137,14 +137,14 @@ sequenceDiagram
   participant G as Gateway
   participant H as Host (browser)
 
-  Ops->>P: Create host "storefront"
+  Ops->>P: Create host storefront
   P->>R: POST /api/hosts
-  R-->>P: 201 + host id
-  Ops->>P: Create gate "shop.example.com" -> storefront
+  R-->>P: 201 plus host id
+  Ops->>P: Create gate shop.example.com for storefront
   P->>R: POST /api/gates
   R-->>P: 201
   R-->>G: WS gate_changed (created)
-  G->>G: add domain "shop.example.com" -> host map
+  G->>G: add domain shop.example.com to host map
   Note over G: Next request to shop.example.com<br/>routes to the new host
 ```
 
