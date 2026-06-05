@@ -49,8 +49,8 @@ Open http://localhost:9000 — you see the complete NexusShop app with your loca
                         |
            /host/*  →  host (layout shell)
            /remotes/<name>/*  →  remote-<name>:80
-           /api/*  →  registry:3000/api/*
-           /ws  →  registry:3000/ws
+           /api/*  →  registry:8670/api/*
+           /ws  →  registry:8670/ws
 
      registry (source of truth — WebSocket broadcast on change)
           ^

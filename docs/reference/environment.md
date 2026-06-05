@@ -2,92 +2,117 @@
 id: environment
 title: Environment variables
 sidebar_position: 1
-description: Complete reference of all Nexus environment variables — NEXUS_TOKEN, ALLOWED_ORIGINS, NODE_AUTH_TOKEN, REGISTRY_INTERNAL_URL, PUBLIC_URL, UPSTREAM_URL and more. One table per service.
-keywords: [Nexus environment variables, micro frontend config, NEXUS_TOKEN, Angular micro frontend environment]
+description: Every environment variable consumed by the Nexus registry, gateway, portal, hosts, and remotes. Defaults, validation rules, and where each is read.
+keywords:
+  - Nexus environment variables
+  - configuration reference
+  - micro frontend platform config
 ---
 
 # Environment variables
 
-Complete table of every environment variable read by Bimo-Nexus services, the package that reads it, and a sensible default.
-
-## Orchestrator (.env in `nexus`)
-
-| Variable | Default | Notes |
-|---|---|---|
-| `NEXUS_TOKEN` | `change-this-to-a-strong-secret-in-production` | Shared secret across registry/host/portal/gateway |
-| `ALLOWED_ORIGINS` | `http://localhost:8666,...,8671` | CORS allowlist for the registry |
-| `REGISTRY_URL` | `http://localhost:3000` | Default registry URL injected into Angular apps |
-| `HOST_REMOTE_ENTRY` | `/host/remoteEntry.json` | Gateway's runtime config: where the host federation entry is |
-| `HOST_EXPOSED_MODULE` | `./AppShell` | Gateway's runtime config: which exposed module to load |
-| `NODE_AUTH_TOKEN` | — | GitHub PAT with `read:packages` — used as a BuildKit secret |
+The complete table of environment variables every Nexus service honors. Anything not listed here is silently ignored. Runtime feature config (rate limits, breakers, protection) lives in the registry and is set through the portal — see [reference: configuration](configuration.md).
 
 ## Registry (`nexus-registry`)
 
-| Variable | Default | Notes |
-|---|---|---|
-| `PORT` | `3000` | HTTP port |
-| `NEXUS_TOKEN` | — | Required. Matched against `X-Nexus-Token`. |
-| `ALLOWED_ORIGINS` | `*` | Comma-separated CORS allowlist. Use `*` only in dev. |
-| `HEALTH_CHECK_INTERVAL_MS` | `30000` | How often the health-check loop pings remotes |
-| `LOG_BUFFER_CAPACITY` | `500` | In-memory log ring buffer size |
-| `SYSTEM_SERVICES` | `''` | Extra service URLs to include in system health |
-| `NODE_ENV` | `development` | Toggles morgan log format |
+| Variable | Default | Validation | Purpose |
+|---|---|---|---|
+| `NEXUS_TOKEN` | empty | non-empty in prod | Initial active token. |
+| `NEXUS_TOKEN_PEPPER` | default warning | non-default in prod | HMAC pepper for token hashing. |
+| `ALLOWED_ORIGINS` | `*` | comma-separated origins or `*` | CORS allowlist. |
+| `DATABASE_URL` | `sqlite:./data/registry.db` | sqlx URL | Storage backend. |
+| `DATA_DIR` | `./data` | absolute path | SQLite directory. |
+| `PORT` | `8670` | 1–65535 | Listen port. |
+| `BIND_ADDRESS` | `0.0.0.0` | IPv4 / IPv6 literal | Listen interface. |
+| `NODE_ENV` | `development` | string | Reported in `/api/system/config`. |
+| `HEALTH_CHECK_INTERVAL_MS` | `30000` | 1 000–600 000 | Background remote health probe. |
+| `LOG_BUFFER_CAPACITY` | `500` | 10–10 000 | Ring buffer entry count. |
+| `RUST_LOG` | `info` | tracing filter | Per-module log levels. |
 
 ## Gateway (`nexus-gateway`)
 
-Build-time `ARG`s:
-
-| ARG | Default | Notes |
-|---|---|---|
-| `HOST_REMOTE_ENTRY` | `/host/remoteEntry.json` | Baked into `environment.prod.ts` |
-| `NEXUS_TOKEN` | `dev-token-change-in-production` | Baked into the auth interceptor |
-
-Runtime env (read by `docker-entrypoint.d/40-runtime-config.sh`):
-
-| Variable | Default | Notes |
-|---|---|---|
-| `HOST_REMOTE_ENTRY` | (ARG value) | Override at container start |
-| `HOST_EXPOSED_MODULE` | `./AppShell` | Override at container start |
-
-## Host (`nexus-host-template`)
-
-Build-time:
-
-| ARG | Default | Notes |
-|---|---|---|
-| `NEXUS_TOKEN` | `dev-token-change-in-production` | Baked into the bundled interceptor |
-| `NODE_AUTH_TOKEN` | — | BuildKit secret — not an ARG (do not pass as `--build-arg`) |
-
-Runtime (`/assets/config.json`):
-
-| Field | Default | Notes |
-|---|---|---|
-| `registryUrl` | `/api` | Base path for registry calls |
-| `nexusToken` | — | Overrides the build-time token |
-| `staticBackupUrl` | `/assets/registry-backup/remotes.json` | Cold-start fallback |
+| Variable | Default | Validation | Purpose |
+|---|---|---|---|
+| `NEXUS_TOKEN` | empty | non-empty | Authenticates to the registry. |
+| `REGISTRY_URL` | `http://registry:8670` | URL | Base URL of the registry. |
+| `NEXUS_GATE_NAME` | first gate found | string | Which gate this instance serves. |
+| `PORT` | `8668` | 1–65535 | Listen port. |
+| `LOG_JSON` | `false` | `1` / `true` / `0` / `false` | Switch logs to JSON. |
+| `RUST_LOG` | `info` | tracing filter | Log levels. |
 
 ## Portal (`nexus-portal`)
 
-Same as host (build-time `NEXUS_TOKEN` + `NODE_AUTH_TOKEN`; runtime `/assets/config.json` with `registryUrl` and `nexusToken`).
+Read at container startup by `docker-entrypoint.sh` and substituted into `assets/config.json`.
 
-## CLI (`@bimo-dk/nexus-cli`)
-
-| Variable | Default | Notes |
+| Variable | Default | Purpose |
 |---|---|---|
-| `NEXUS_TOKEN` | — | Required for `publish`, `status`, `health` |
-| `REGISTRY_URL` | `http://localhost:3000` | |
-| `REMOTE_URL` | `/remotes/<name>/remoteEntry.json` | Used by `publish` |
-| `REMOTE_ROUTE` | derived from name | Override the route |
-| `NEXUS_STAGING_TOKEN`, etc. | — | Whatever you put in `nexus.config.json#environments.<env>.tokenEnv` |
+| `REGISTRY_URL` | `/api` | Base URL the portal calls. |
+| `WS_URL` | `/ws` | WebSocket path. |
+| `NEXUS_TOKEN` | empty | Pre-populated token (optional). User can override in UI. |
 
-`.env` in the cwd is auto-loaded.
+## Host (Angular and Vue templates)
 
-## `nexus-build`
+Read at bootstrap by `provideNexusHost()` (Angular) or `createNexusPlugin()` (Vue).
 
-No env vars. Reads only `package.json` and `src/**/*.ts`.
+| Variable | Default | Purpose |
+|---|---|---|
+| `REGISTRY_INTERNAL_URL` | `http://registry:8670` | How the host reaches the registry. |
+| `NEXUS_TOKEN` | empty | Token used for registry calls. |
+| `STATIC_BACKUP_URL` | `/assets/registry-backup.json` | Fallback if the registry is down. |
+| `WS_URL` | `/ws` | WebSocket path. |
+| `HOST_NAME` | template name | Reported on self-registration. |
+| `HOST_FRAMEWORK` | template default | `angular` / `vue` / `react`. |
+| `HOST_PUBLIC_URL` | container URL | URL the gateway proxies to. |
+| `HOST_REMOTE_ENTRY` | `/remoteEntry.json` | Path to the host's federation manifest. |
+| `HOST_EXPOSED_MODULE` | `./AppShell` | Module the federation manifest exposes. |
 
-## Common pitfalls
+## Remote (Angular, Vue, React templates)
 
-- **`NODE_AUTH_TOKEN` vs `GITHUB_TOKEN`.** Inside the Docker BuildKit secret block you read `NODE_AUTH_TOKEN`. The `.npmrc` template uses `${NODE_AUTH_TOKEN}`. They have to match. `GITHUB_TOKEN` is a separate thing used by GitHub Actions to talk back to GitHub — different scope, different file.
-- **`ALLOWED_ORIGINS=*` works in dev, breaks in browsers with credentials.** Use an explicit allowlist for staging/prod.
-- **`NEXUS_TOKEN` baked vs. runtime.** The host and gateway accept *both* a build-time `ARG NEXUS_TOKEN` (baked into the bundle) and a runtime override from `/assets/config.json`. The runtime override wins. If they disagree, you'll get sporadic 401s — pick one source of truth.
+Read by `provideNexusRemote()` (Angular) or `registerNexusRemote()` (Vue / React).
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `REGISTRY_INTERNAL_URL` | `http://registry:8670` | Where to self-register. |
+| `NEXUS_TOKEN` | empty | Token used for the registration POST. |
+| `PUBLIC_URL` | required | URL the remote will be served from (e.g. `/remotes/checkout/remoteEntry.json`). |
+| `UPSTREAM_URL` | required | The container's internal URL (e.g. `http://checkout:80`). |
+| `REMOTE_VISIBILITY` | `global` | `global` or `host:<host_id>`. |
+
+## CLI (`bnx`)
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXUS_TOKEN` | empty | Token used by every command that talks to the registry. |
+| `REGISTRY_URL` | `http://localhost:8668` | Default registry URL. Read from `.env` in cwd. |
+| `REMOTE_URL` | derived | URL to publish (for `bnx publish`). |
+| `REMOTE_ROUTE` | derived | Route path override (for `bnx publish`). |
+| `NEXUS_GATE_NAME` | none | Used by `bnx dev --gate`. |
+| `NO_COLOR` | unset | Disable ANSI color in output. |
+
+## Build (`@bimo-dk/nexus-build`)
+
+Read by `nexus-build` at build time.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `NEXUS_PROJECT_ROOT` | cwd | Override the project root for scanning. |
+| `NEXUS_SRC` | `src` | Source dir relative to project root. |
+
+## Docker build
+
+| Variable | Purpose |
+|---|---|
+| `NODE_AUTH_TOKEN` | Read from a BuildKit secret named `npmrc`; never via `ARG`. PAT for GitHub Packages. |
+| `DOCKER_BUILDKIT` | Must be `1`. Compose enables it automatically with `# syntax=docker/dockerfile:1.6`. |
+
+## Where it all comes from
+
+- Compose: `.env` in the `nexus` orchestrator repo, plus `environment:` blocks per service.
+- Kubernetes: `Secret` for tokens, `ConfigMap` for everything else, `envFrom:` in the pod spec.
+- Dev (`bnx dev`): `.env` in your workspace.
+
+## Next
+
+- [Reference: configuration](configuration.md) — runtime-configurable feature settings.
+- [Reference: security](security.md) — token rotation, CORS, and the BuildKit secret pattern.
+- [Reference: api-reference](api-reference.md) — endpoints these env vars enable.

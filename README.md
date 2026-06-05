@@ -87,7 +87,7 @@ That's it. Federation, route registration, cache, error states, registry sync �
 ```bash
 npm install --legacy-peer-deps
 npm run docs:start
-# → http://localhost:3000
+# → http://localhost:8670
 ```
 
 ---

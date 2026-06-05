@@ -1,98 +1,110 @@
 ---
 id: portal
-title: Portal
+title: nexus-portal
 sidebar_position: 3
-description: The Nexus admin portal — Angular 19 operator UI for managing remotes, viewing live logs and metrics, toggling features, and monitoring registry health. Real-time updates over WebSocket, no page refresh needed.
-keywords: [micro frontend admin portal, Angular admin dashboard, remote management UI, micro frontend operator tools]
+description: The nexus-portal repository — Angular 19 admin UI for Nexus. Build, run, configure, deploy.
+keywords:
+  - micro frontend portal
+  - nexus-portal
+  - Angular admin
+  - admin dashboard
 ---
 
-# Portal
+# nexus-portal
 
-Repo: [`nexus-portal`](https://github.com/Bimo-dk/citizen/nexus-portal) — Image: `ghcr.io/bimo-dk/nexus-portal`
+The `nexus-portal` repository ships the Angular 19 admin application. This page is the per-repo build / run / deploy reference. For the page-by-page tour, see [Infra: portal](../infrastructure/infra-portal.md).
 
-The **portal** is an Angular 19 admin app for operating the platform. It talks to the registry over HTTP + WebSocket, never to the remotes directly.
+## Repository layout
 
-URL: http://localhost:8669
-
-## Feature areas
-
-| Route | Component | What you can do |
-|---|---|---|
-| `/dashboard` | `DashboardComponent` | One-glance status: registry online, remote count, last broadcast, recent log lines |
-| `/system/health` | `SystemComponent` | Live aggregated health from `/api/system/health` |
-| `/system/config` | `ConfigComponent` | Effective registry config (env-derived) |
-| `/system/logs` | `LogsComponent` | Live log viewer over `/ws` log subscription |
-| `/system/metrics` | `MetricsComponent` | Per-route counters, p50/p95 latencies, custom counters |
-| `/remotes` | `RemoteListComponent` | Table of remotes with toggle/delete actions |
-| `/remotes/new` | `RemoteAddComponent` | Form to register a remote |
-| `/remotes/:name` | `RemoteDetailComponent` | One remote — config, health, redeploy button |
-
-## How the portal talks to the registry
-
-- HTTP — `ManagerService` (under `features/services/`) uses `HttpClient` with the `nexusAuth` and `correlationId` interceptors, exactly like the host. Token is loaded from `/assets/config.json` at app start.
-- WebSocket — the portal subscribes to `remotes_changed`, `system_health` and `log` events from `/ws` and updates signals in place.
-
-This means every action you take in the portal is reflected on connected hosts within milliseconds — *and* every change a CLI client makes shows up in the portal without refresh.
-
-## Build & deploy
-
-The portal is shipped as a single Docker image. At container start, `docker-entrypoint.d/40-runtime-config.sh` substitutes:
-
-- `NEXUS_TOKEN` into the bundled interceptor
-- `REGISTRY_URL` into `/assets/config.json`
-
-so the same image runs against any environment.
-
-```bash
-docker compose up --build portal
+```
+nexus-portal/
+├── src/
+│   ├── app/             # standalone components
+│   ├── styles/          # SCSS, theme tokens
+│   ├── main.ts
+│   └── index.html
+├── angular.json
+├── package.json
+├── Dockerfile           # build + nginx final stage
+├── nginx.conf
+├── docker-entrypoint.sh # substitutes runtime config
+└── .npmrc
 ```
 
-## Adding a new view
-
-Components live under `src/app/features/`. The pattern:
-
-1. Create a standalone component under `features/<area>/<view>.component.ts`.
-2. Add a lazy `loadComponent` route in `app.routes.ts`.
-3. Inject the existing `ManagerService` and read from its signals.
-
-The whole app is `OnPush` + signals; there is no Zone-based change detection mental model — values change only when a signal updates.
-
-## Local development
+## Build
 
 ```bash
 cd nexus-portal
-npm ci
-npm start            # ng serve --port 8669 --host 0.0.0.0
+npm install
+npm run build
 ```
 
-For talking to a local registry, set `/assets/config.json` to:
+Equivalent for pnpm: `pnpm install && pnpm build`. For yarn: `yarn && yarn build`.
 
-```json
-{ "registryUrl": "http://localhost:3000", "nexusToken": "dev-token" }
+Docker:
+
+```bash
+docker build --secret id=npmrc,src=$HOME/.npmrc -t ghcr.io/bimo-dk/nexus-portal:dev .
 ```
 
-For developing the portal while pointing at a deployed registry, use the dev-proxy and put the portal's `registryUrl` to `/api`:
+## Run
 
-```jsonc
-// nexus.dev.json (in nexus orchestrator)
-{ "proxyPort": 9000, "local": {}, "remote": { "url": "https://nexus-staging.example.com" } }
+```bash
+docker run --rm -p 8669:80 \
+  -e NEXUS_TOKEN=$NEXUS_TOKEN \
+  -e REGISTRY_URL=http://registry:8670 \
+  --network nexus_default \
+  ghcr.io/bimo-dk/nexus-portal:dev
 ```
 
-Then run the portal on top of the proxy.
+The portal serves over nginx and is configured at startup by `docker-entrypoint.sh`, which substitutes `NEXUS_TOKEN`, `REGISTRY_URL`, and `WS_URL` into `assets/config.json` before nginx starts.
 
-## Files of interest
+| Env var | Purpose |
+|---|---|
+| `NEXUS_TOKEN` | optional default — user can override in the UI |
+| `REGISTRY_URL` | base URL the portal talks to (default `/api`) |
+| `WS_URL` | WebSocket URL (default `/ws`) |
 
-- `src/app/features/services/manager.service.ts` — single point of contact for registry calls.
-- `src/app/interceptors/nexus-auth.interceptor.ts` — adds `X-Nexus-Token`.
-- `src/app/interceptors/correlation-id.interceptor.ts` — adds `X-Request-ID`.
-- `src/app/types/` — UI-side mirror of `@bimo-dk/nexus-core` types.
+In a normal deployment, the gateway proxies `/api` and `/ws` to the registry, so the portal just calls relative URLs.
 
-## Why not just curl the registry?
+## Health
 
-The portal is the **discoverability surface** for everyone who is not a developer with `curl` muscle memory:
+The portal serves a static SPA. The container's healthcheck hits nginx's own status:
 
-- A PM can see "is the platform up?" without opening a terminal.
-- A tester can toggle a remote on/off without redeploying.
-- An on-call engineer can read live logs without `docker logs`.
+```bash
+curl http://localhost:8669/
+```
 
-It is the same registry API behind a calm UI.
+## Dev mode
+
+```bash
+npm run start
+# vite-style dev server on port 8669 with HMR
+```
+
+Set `VITE_REGISTRY_URL=http://localhost:8670` to point at a local registry.
+
+## Theming
+
+The portal supports light and dark themes. The default is `system` (respects `prefers-color-scheme`); a manual toggle persists to `localStorage`. Theme tokens live in `src/styles/` and follow the same palette as the docs site.
+
+## Deploy
+
+```yaml
+portal:
+  image: ghcr.io/bimo-dk/nexus-portal:1.0
+  environment:
+    REGISTRY_URL: /api
+    WS_URL: /ws
+  ports:
+    - "8669:80"
+  restart: unless-stopped
+```
+
+Behind the gateway, set `REGISTRY_URL` and `WS_URL` to relative paths so all browser traffic stays on the same origin.
+
+## Next
+
+- [Infra: portal](../infrastructure/infra-portal.md) — every page.
+- [Packages: nexus-ui](../packages/nexus-ui.md) — shared components.
+- [Reference: api-reference](../reference/api-reference.md) — endpoints the portal calls.

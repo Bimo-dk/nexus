@@ -8,24 +8,28 @@ const CUSTOM_DOMAIN = 'nexus.bimo.dk';
 const SITE_URL = `https://${CUSTOM_DOMAIN}`;
 
 const DESCRIPTION =
-  'Nexus is an open-source Angular 19 micro frontend platform built on Native Federation. ' +
-  'Zero-config federation, live remote registration over WebSocket, one-command local dev, ' +
-  'cross-team component catalog, zero-downtime deploys — all out of the box.';
+  'Nexus is the open-source micro frontend platform for Angular, Vue, and React. ' +
+  'Rust-powered registry and gateway, dynamic remote loading, multi-domain gates, ' +
+  'built-in DDoS protection, live configuration, and zero-downtime deploys.';
 
 const KEYWORDS = [
-  'Angular micro frontend',
-  'Angular Native Federation',
+  'micro frontend',
   'micro frontend platform',
-  'Angular 19 micro frontend',
-  'module federation Angular',
+  'micro frontend framework',
+  'Angular micro frontend',
+  'Vue micro frontend',
+  'React micro frontend',
+  'multi-framework micro frontend',
+  'module federation',
+  'module federation alternative',
+  'native federation',
   'micro frontend registry',
-  'micro frontend architecture',
-  'Angular federation',
-  'micro frontend docker',
-  'bnx cli',
-  'Native Federation',
-  'Angular micro frontend framework',
-  'open source Angular',
+  'micro frontend gateway',
+  'component federation Angular Vue React',
+  'Rust web server',
+  'high availability frontend',
+  'zero downtime deployment',
+  'frontend platform',
   'Bimo Nexus',
 ].join(', ');
 
@@ -34,13 +38,13 @@ const JSON_LD_SOFTWARE: Record<string, unknown> = {
   '@type': 'SoftwareApplication',
   name: 'Nexus',
   applicationCategory: 'DeveloperApplication',
-  operatingSystem: 'Linux, macOS, Windows',
+  operatingSystem: 'Any',
   description: DESCRIPTION,
   url: SITE_URL,
   author: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
   license: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}/blob/main/LICENSE`,
-  programmingLanguage: 'TypeScript',
-  runtimePlatform: 'Node.js, Docker',
+  programmingLanguage: ['Rust', 'TypeScript'],
+  runtimePlatform: ['Linux', 'Docker'],
   keywords: KEYWORDS,
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
   sameAs: [`https://github.com/${GITHUB_ORG}/${GITHUB_REPO}`],
@@ -73,8 +77,8 @@ const JSON_LD_WEBSITE: Record<string, unknown> = {
 };
 
 const config: Config = {
-  title: 'Nexus — Angular Micro Frontend Platform',
-  tagline: 'Zero-config federation. Live remote registration. One-command local dev.',
+  title: 'Nexus',
+  tagline: 'The production micro frontend platform for Angular, Vue, and React.',
   favicon: 'img/favicon.ico',
 
   url: SITE_URL,
@@ -91,6 +95,28 @@ const config: Config = {
     defaultLocale: 'en',
     locales: ['en'],
   },
+
+  markdown: {
+    mermaid: true,
+  },
+
+  themes: [
+    '@docusaurus/theme-mermaid',
+    [
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      require.resolve('@easyops-cn/docusaurus-search-local'),
+      {
+        hashed: true,
+        language: ['en'],
+        indexDocs: true,
+        indexBlog: false,
+        indexPages: false,
+        docsRouteBasePath: '/',
+        highlightSearchTermsOnTargetPage: true,
+        searchResultLimits: 12,
+      },
+    ],
+  ],
 
   headTags: [
     {
@@ -144,39 +170,42 @@ const config: Config = {
     colorMode: {
       defaultMode: 'dark',
       respectPrefersColorScheme: true,
+      disableSwitch: false,
+    },
+    mermaid: {
+      theme: { light: 'neutral', dark: 'dark' },
     },
     metadata: [
-      // Core description
       { name: 'description', content: DESCRIPTION },
       { name: 'keywords', content: KEYWORDS },
       { name: 'author', content: 'Bimo' },
-      { name: 'robots', content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1' },
-      // Open Graph
+      {
+        name: 'robots',
+        content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
+      },
       { property: 'og:type', content: 'website' },
       { property: 'og:site_name', content: 'Nexus' },
-      { property: 'og:title', content: 'Nexus — Angular Micro Frontend Platform' },
+      { property: 'og:title', content: 'Nexus — micro frontends for Angular, Vue, and React' },
       { property: 'og:description', content: DESCRIPTION },
       { property: 'og:image', content: `${SITE_URL}/img/social-card.png` },
       { property: 'og:image:width', content: '1200' },
       { property: 'og:image:height', content: '630' },
-      { property: 'og:image:alt', content: 'Nexus — Angular Micro Frontend Platform' },
+      { property: 'og:image:alt', content: 'Nexus — micro frontend platform for Angular, Vue, and React' },
       { property: 'og:url', content: SITE_URL },
       { property: 'og:locale', content: 'en_US' },
-      // Twitter / X
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: 'Nexus — Angular Micro Frontend Platform' },
+      { name: 'twitter:title', content: 'Nexus — micro frontends for Angular, Vue, and React' },
       { name: 'twitter:description', content: DESCRIPTION },
       { name: 'twitter:image', content: `${SITE_URL}/img/social-card.png` },
-      { name: 'twitter:image:alt', content: 'Nexus — Angular Micro Frontend Platform' },
-      // AI crawlers / LLM indexing
+      { name: 'twitter:image:alt', content: 'Nexus — micro frontend platform for Angular, Vue, and React' },
       { name: 'llms', content: `${SITE_URL}/llms.txt` },
     ],
     announcementBar: {
-      id: 'open-source',
+      id: 'open-source-v1',
       content:
-        'Nexus is an open-source project developed by <strong>Bimo</strong>. Contributions welcome — <a href="https://github.com/Bimo-dk/nexus" target="_blank">star us on GitHub</a>.',
-      backgroundColor: '#6366f1',
-      textColor: '#ffffff',
+        'Nexus 1.0 is here — Rust registry and gateway, Angular &middot; Vue &middot; React. <a href="https://github.com/Bimo-dk/nexus" target="_blank">Star on GitHub</a>.',
+      backgroundColor: '#1f2937',
+      textColor: '#e5e7eb',
       isCloseable: true,
     },
     navbar: {
@@ -194,6 +223,18 @@ const config: Config = {
         },
         {
           type: 'docSidebar',
+          sidebarId: 'guidesSidebar',
+          position: 'left',
+          label: 'Guides',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'infraSidebar',
+          position: 'left',
+          label: 'Infrastructure',
+        },
+        {
+          type: 'docSidebar',
           sidebarId: 'packagesSidebar',
           position: 'left',
           label: 'Packages',
@@ -203,6 +244,12 @@ const config: Config = {
           sidebarId: 'referenceSidebar',
           position: 'left',
           label: 'Reference',
+        },
+        {
+          type: 'docSidebar',
+          sidebarId: 'compareSidebar',
+          position: 'left',
+          label: 'Compare',
         },
         {
           href: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}`,
@@ -221,24 +268,36 @@ const config: Config = {
             { label: 'Overview', to: '/getting-started/overview' },
             { label: 'Installation', to: '/getting-started/installation' },
             { label: 'Architecture', to: '/getting-started/architecture' },
+            { label: 'Ports and URLs', to: '/getting-started/ports-and-urls' },
           ],
         },
         {
-          title: 'Guides',
+          title: 'Quick starts',
           items: [
-            { label: 'Create a remote', to: '/workflows/create-remote' },
-            { label: 'Loading patterns', to: '/workflows/loading-patterns' },
-            { label: 'Component catalog', to: '/workflows/component-catalog' },
-            { label: 'Local dev (hot reload)', to: '/workflows/dev-mode' },
+            { label: 'Angular', to: '/getting-started/quick-start-angular' },
+            { label: 'Vue', to: '/getting-started/quick-start-vue' },
+            { label: 'React', to: '/getting-started/quick-start-react' },
+            { label: 'Mixed stack', to: '/guides/guide-mixed-stack' },
           ],
         },
         {
-          title: 'Packages',
+          title: 'Infrastructure',
           items: [
-            { label: '@bimo-dk/nexus-runtime', to: '/packages/nexus-runtime' },
-            { label: '@bimo-dk/nexus-build', to: '/packages/nexus-build' },
-            { label: '@bimo-dk/nexus-cli (bnx)', to: '/packages/nexus-cli' },
-            { label: 'All packages', to: '/packages/overview' },
+            { label: 'Registry', to: '/infrastructure/infra-registry' },
+            { label: 'Gateway', to: '/infrastructure/infra-gateway' },
+            { label: 'Portal', to: '/infrastructure/infra-portal' },
+            { label: 'Hosts and gates', to: '/infrastructure/infra-hosts-and-gates' },
+            { label: 'Protection', to: '/infrastructure/infra-protection' },
+            { label: 'High availability', to: '/infrastructure/infra-high-availability' },
+          ],
+        },
+        {
+          title: 'Compare',
+          items: [
+            { label: 'vs Module Federation', to: '/compare/compare-module-federation' },
+            { label: 'vs single-spa', to: '/compare/compare-single-spa' },
+            { label: 'vs Bit', to: '/compare/compare-bit' },
+            { label: 'vs Nx monorepo', to: '/compare/compare-nx-monorepo' },
           ],
         },
         {
@@ -253,16 +312,28 @@ const config: Config = {
               label: 'License (MIT)',
               href: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}/blob/main/LICENSE`,
             },
-            { label: 'llms.txt', to: '/llms.txt' },
+            { label: 'llms.txt', href: 'pathname:///llms.txt' },
           ],
         },
       ],
-      copyright: `Nexus — open-source Angular micro frontend platform developed by Bimo. © ${new Date().getFullYear()}`,
+      copyright: `Nexus — the open-source micro frontend platform for Angular, Vue, and React. Built by Bimo. © ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,
       darkTheme: prismThemes.dracula,
-      additionalLanguages: ['bash', 'json', 'nginx', 'docker', 'yaml', 'typescript'],
+      additionalLanguages: [
+        'bash',
+        'json',
+        'jsx',
+        'tsx',
+        'nginx',
+        'docker',
+        'yaml',
+        'toml',
+        'rust',
+        'typescript',
+        'scss',
+      ],
     },
   } satisfies Preset.ThemeConfig,
 };

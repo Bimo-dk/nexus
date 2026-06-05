@@ -2,102 +2,88 @@
 id: nexus-core
 title: '@bimo-dk/nexus-core'
 sidebar_position: 2
-description: "@bimo-dk/nexus-core — shared TypeScript types and interfaces for the entire Nexus platform. RemoteConfig, HealthSnapshot, LogEntry and more. Used by every service and package in the stack."
-keywords: [nexus-core TypeScript types, Angular micro frontend types, RemoteConfig interface, Nexus platform types]
+description: TypeScript types, constants, and validators shared by every Nexus client and adapter. Zero runtime dependencies.
+keywords:
+  - nexus-core
+  - micro frontend types
+  - TypeScript SDK
 ---
 
 # @bimo-dk/nexus-core
 
-The single source of truth for types, constants, validators and errors across every Bimo-Nexus service. Zero runtime dependencies — pure TypeScript.
+Types, constants, and validators for the Nexus platform. Zero runtime dependencies. Imported by every other `@bimo-dk/*` package.
+
+## Install
 
 ```bash
 npm install @bimo-dk/nexus-core
+# pnpm add @bimo-dk/nexus-core
+# yarn add @bimo-dk/nexus-core
 ```
 
-## What's exported
+Usually a transitive dependency — you install it directly only when writing types-only utilities.
 
-### Types
-
-```ts
-import type {
-  RemoteConfig,
-  AddRemoteRequest,
-  UpdateRemoteRequest,
-  RegistryResponse,
-  HealthStatus,
-  RemoteHealthStatus,
-  WebSocketMessage,
-} from '@bimo-dk/nexus-core';
-```
-
-`RemoteConfig` is the schema for a single remote — used by registry, host, portal and CLI alike.
-
-```ts
-interface RemoteConfig {
-  name: string;          // camelCase
-  url: string;           // http(s) URL or absolute path
-  exposedModule: string; // './RemoteEntry'
-  routePath: string;     // kebab-case
-  enabled: boolean;
-  addedAt: string;       // ISO 8601
-}
-```
-
-### Constants
-
-```ts
-import { NEXUS_DEFAULTS } from '@bimo-dk/nexus-core';
-
-NEXUS_DEFAULTS.TOKEN_HEADER       // 'X-Nexus-Token'
-NEXUS_DEFAULTS.CORRELATION_HEADER // 'X-Request-ID'
-NEXUS_DEFAULTS.REGISTRY_PORT      // 3000
-NEXUS_DEFAULTS.GATEWAY_PORT       // 8668
-NEXUS_DEFAULTS.PORTAL_PORT        // 8669
-```
-
-The object is `Object.freeze`'d so importers cannot mutate it.
-
-### Validators
+## Usage
 
 ```ts
 import {
+  RemoteConfig,
+  RegistryResponse,
+  Host,
+  Gate,
+  NEXUS_DEFAULTS,
+  RegistryError,
   isValidRemoteName,
   isValidRoutePath,
   isValidUrl,
-  isValidUrlOrPath,
 } from '@bimo-dk/nexus-core';
 
-isValidRemoteName('myRemote');   // true
-isValidRemoteName('my-remote');  // false (must be camelCase)
-isValidRoutePath('my-remote');   // true
-isValidRoutePath('myRemote');    // false (must be kebab-case)
-isValidUrlOrPath('/foo/bar');    // true (absolute path allowed)
-isValidUrlOrPath('http://x');    // true
-isValidUrlOrPath('x.y');         // false
+if (isValidRemoteName('myRemote')) {
+  // safe to send to the registry
+}
+
+console.log(NEXUS_DEFAULTS.TOKEN_HEADER); // 'X-Nexus-Token'
 ```
 
-The registry uses these to validate `POST /api/remotes` bodies — pull them in if you build a different ingress for the registry.
+## Exports
+
+### Types
+
+| Name | Purpose |
+|---|---|
+| `RemoteConfig` | Shape of a registered remote (name, url, exposedModule, routePath, enabled, visibility, health). |
+| `Host` | Shape of a registered host (name, url, framework, remoteEntry, exposedModule). |
+| `Gate` | Shape of a gate (name, domain, hostId, enabled). |
+| `RegistryResponse` | `{ remotes, total, enabled }` returned from `GET /api/remotes`. |
+| `HealthStatus` | `'healthy' \| 'degraded' \| 'down' \| 'unknown'`. |
+| `WebSocketMessage` | Discriminated union of every server-pushed message type. |
+| `AddRemoteRequest`, `UpdateRemoteRequest` | Body shapes for write endpoints. |
+| `CreateHostRequest`, `UpdateHostRequest` | Body shapes for host endpoints. |
+| `CreateGateRequest`, `UpdateGateRequest` | Body shapes for gate endpoints. |
+
+### Constants
+
+| Name | Value |
+|---|---|
+| `NEXUS_DEFAULTS.REGISTRY_PORT` | `8670` |
+| `NEXUS_DEFAULTS.GATEWAY_PORT` | `8668` |
+| `NEXUS_DEFAULTS.PORTAL_PORT` | `8669` |
+| `NEXUS_DEFAULTS.TOKEN_HEADER` | `'X-Nexus-Token'` |
+| `NEXUS_DEFAULTS.CORRELATION_HEADER` | `'X-Request-ID'` |
+| `NEXUS_DEFAULTS.WS_PATH` | `'/ws'` |
 
 ### Errors
 
-```ts
-import { RegistryError } from '@bimo-dk/nexus-core';
+`RegistryError` — typed exception with `statusCode`, `correlationId`, optional `code`.
 
-throw new RegistryError({
-  message: 'Remote not found',
-  statusCode: 404,
-  correlationId: req.headers['x-request-id'],
-});
-```
+### Validators
 
-A typed exception with `statusCode` + `correlationId`. The registry middleware turns it into the standard JSON error response.
+`isValidRemoteName(s: string): boolean` — camelCase starting with a lowercase letter.
+`isValidRoutePath(s: string): boolean` — kebab-case starting with a lowercase letter.
+`isValidUrl(s: string): boolean` — must be `https://` or `http://`.
+`isValidUrlOrPath(s: string): boolean` — same as `isValidUrl`, or an absolute path starting with `/`.
 
-## Why it has zero runtime deps
+## Next
 
-Every other `@bimo-dk/*` package depends on this one. If `core` pulled in even a small util library, that library would be loaded twice (once by Angular host, once by the registry's Node process), and version mismatches would become very expensive. Zero deps means zero churn.
-
-## Versioning rule
-
-Anything `core` exports is part of the public Bimo-Nexus contract. A breaking change in `core` requires a major bump on `core` *and* a coordinated bump on every consumer.
-
-Use Changesets to express this: when you change a type that consumers will care about, mark `nexus-core` as a `major` and explicitly list every dependent that needs an update in the changeset description.
+- [`@bimo-dk/nexus-client`](nexus-client.md) — uses these types.
+- [Reference: api-reference](../reference/api-reference.md) — the API these shapes describe.

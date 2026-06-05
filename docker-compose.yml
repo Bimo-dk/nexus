@@ -18,16 +18,16 @@ services:
     image: nexus-registry:latest
     container_name: nexus-registry
     expose:
-      - "3000"
+      - "8670"
     environment:
       NODE_ENV: production
-      PORT: 3000
+      PORT: 8670
       NEXUS_TOKEN: ${NEXUS_TOKEN:-change-this-to-a-strong-secret-in-production}
       ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-*}
     volumes:
       - registry-data:/app/data
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost:3000/health"]
+      test: ["CMD", "wget", "-qO-", "http://localhost:8670/health"]
       interval: 30s
       timeout: 10s
       retries: 3

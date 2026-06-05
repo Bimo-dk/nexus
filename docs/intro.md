@@ -1,142 +1,323 @@
 ---
 id: intro
-title: Nexus — Angular Micro Frontend Platform
+title: Nexus — micro frontends for Angular, Vue, and React
 slug: /
 sidebar_position: 1
-description: Nexus is an open-source Angular 19 micro frontend platform. Zero-config federation, live remote registration, cross-team component catalog, and zero-downtime deploys — all out of the box.
-keywords: [Angular micro frontend, Native Federation, Angular 19, micro frontend platform, module federation, Angular federation]
+description: Nexus is the open-source micro frontend platform for Angular, Vue, and React. Rust-powered registry and gateway, dynamic remote loading, multi-domain gates, and zero-downtime deploys.
+keywords:
+  - micro frontend
+  - micro frontend platform
+  - Angular micro frontend
+  - Vue micro frontend
+  - React micro frontend
+  - module federation alternative
+  - native federation
+  - micro frontend registry
+  - micro frontend gateway
+  - multi-framework micro frontend
+  - component federation Angular Vue React
 ---
 
-# Nexus — micro frontends without the pain
+# Nexus
 
-> **An open-source Angular 19 micro frontend platform — developed by Bimo. MIT-licensed.**
+> **The production micro frontend platform for Angular, Vue, and React.**
+> One Rust-powered registry. One Rust-powered gateway. Unlimited applications. MIT-licensed.
 
-Nexus is the production stack we wish existed when we started doing micro frontends in Angular. It bundles a **gateway**, a **layout host**, a **registry with WebSocket broadcast**, an **admin portal**, a **hot-reload dev proxy**, a **CLI** and **seven `@bimo-dk/*` packages** — so a multi-team product can ship independent remotes with zero downtime, no hand-edited federation config, and a one-command local dev loop.
+Every other micro frontend tool solves one half of the problem. The build-time half (Module Federation) or the routing half (single-spa) or the components half (Bit). Nexus solves the *complete* problem: a Rust registry that hosts, gates and remotes register against; a Rust gateway that builds its proxy table from that registry at runtime; an admin portal; built-in DDoS protection; and adapter packages so an Angular host can load a Vue remote and a React remote in the same browser tab.
+
+<div className="nexus-stat">
+  <div className="stat"><div className="num">3</div><div className="label">Frameworks (Angular, Vue, React)</div></div>
+  <div className="stat"><div className="num">~12 MB</div><div className="label">Registry RSS at idle</div></div>
+  <div className="stat"><div className="num">~20 ms</div><div className="label">Registry cold start</div></div>
+  <div className="stat"><div className="num">7</div><div className="label">DDoS protection layers</div></div>
+  <div className="stat"><div className="num">0</div><div className="label">Restarts to add a remote</div></div>
+</div>
 
 ```bash
+git clone https://github.com/Bimo-dk/nexus.git && cd nexus
 docker compose up --build
-# → http://localhost:8668   the app
-# → http://localhost:8669   the admin portal
+# Application: http://localhost:8668
+# Portal:      http://localhost:8669
 ```
 
 ---
 
-## Why you want this
+## Without Nexus vs. with Nexus
 
-| Pain | What Nexus does |
-|---|---|
-| Hand-editing `federation.config.json` per remote | `@NexusRemote()` decorator — config is generated at build time |
-| Restarting the host every time a remote ships | Registry broadcasts over WebSocket; host adds the route live |
-| "Works on my machine" remote dev | `bnx dev` runs one remote locally against shared staging in a single command |
-| Browser caching a stale `remoteEntry.json` after deploy | Gateway sets `no-store` on every federation entry — new bundles are visible instantly |
-| No way to discover what components other teams expose | `@NexusComponent({...})` produces a `catalog.json`; the portal shows an aggregated, searchable catalog |
-| Five YAML files to add a new mount-point in your shell | `<nexus-component remote="..." expose="..." />` or `nexusRoute({...})` — one line each |
-| Registry outage = production outage | Three-layer fallback: live → sessionStorage cache → static backup |
-| Federation tokens leaking through build args | BuildKit `--mount=type=secret` baked into every Dockerfile template |
-| Multiple teams stepping on the same gateway URL | Stable `/host/*`, `/remotes/<name>/*`, `/api/*` contract — host & remotes redeploy independently |
+The same outcome — a Vue micro frontend, mounted at `/checkout`, registered with a runtime registry.
+
+```ts
+// Without Nexus — you write all of this, every time, per remote.
+//  1. A bespoke federation manifest (federation.config.json or webpack config)
+//  2. A bootstrap that fetches the manifest, parses it, loads each remote module
+//  3. A WebSocket client with exponential backoff
+//  4. A fallback chain when the registry is down (cache + static backup)
+//  5. A token interceptor on every fetch
+//  6. nginx config that has to be regenerated every time you add a remote
+//  7. A CORS layer
+//  8. A health-check loop
+//  9. A metrics scrape endpoint
+// 10. A loader that handles framework boundaries (Vue inside Angular host)
+```
+
+```ts
+// With Nexus — the entry file for the same Vue remote, in full:
+import { createApp } from 'vue';
+import { registerNexusRemote } from '@bimo-dk/nexus-runtime-vue';
+import App from './app.vue';
+
+registerNexusRemote({
+  name: 'checkout',
+  url: `${window.location.origin}/remoteEntry.json`,
+  exposedModule: './RemoteEntry',
+  routePath: 'checkout',
+});
+
+createApp(App).mount('#app');
+```
+
+That is the whole file. The decorator on the entry component (`@NexusComponent`) takes care of the catalog metadata. The Vite plugin (`nexusVite`) emits `remoteEntry.json`. Everything else — registration, route propagation, gateway proxy, cache headers, fallback — is the platform doing its job.
 
 ---
 
-## The 30-second pitch
+## Quick start in any of the three frameworks
+
+Every quick start ships an end-to-end working remote, registered with the Nexus registry, in under five minutes.
+
+### Angular remote
 
 ```ts
-// In a remote — this is the only file you should write
+// src/app/remote-entry/entry.component.ts
+import { Component } from '@angular/core';
 import { NexusRemote, NexusComponent } from '@bimo-dk/nexus-build';
 
-@NexusRemote()                           // <- federation config is generated for you
-@NexusComponent({                        // <- catalog metadata appears in the portal
-  title: 'Order Table',
-  category: 'data-display',
-  tags: ['orders', 'commerce'],
-  inputs: {
-    filter: { type: 'string', default: 'pending' },
-    pageSize: { type: 'number', default: 25 },
-  },
-})
-@Component({ /* ... */ })
-export default class OrderTableComponent {}
+@NexusRemote()
+@NexusComponent({ title: 'Checkout', category: 'commerce' })
+@Component({ standalone: true, selector: 'app-checkout', template: '<h1>Checkout</h1>' })
+export default class CheckoutComponent {}
 ```
 
 ```ts
-// In the host — three ways to mount a federated component
-import { nexusRoute } from '@bimo-dk/nexus-runtime';
+// src/main.ts
+import { bootstrapApplication } from '@angular/platform-browser';
+import { provideNexusRemote } from '@bimo-dk/nexus-runtime';
+import CheckoutComponent from './app/remote-entry/entry.component';
 
-export const routes: Routes = [
-  nexusRoute({ path: 'orders', remote: 'orders', expose: 'OrderTable' }),
-];
-
-// or as a drop-in tag, anywhere in any template:
-<nexus-component remote="orders" expose="OrderTable" [inputs]="{ filter: 'pending' }" />
+bootstrapApplication(CheckoutComponent, {
+  providers: [provideNexusRemote({ entry: CheckoutComponent })],
+});
 ```
 
-That's it. Federation, route registration, cache, error states, registry sync — all handled.
+Full guide: [Angular remote in 5 minutes](getting-started/quick-start-angular.md).
+
+### Vue remote
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import vue from '@vitejs/plugin-vue';
+import { nexusVite } from '@bimo-dk/nexus-build/vite';
+
+export default defineConfig({
+  plugins: [
+    vue(),
+    nexusVite({ name: 'checkout', exposes: { RemoteEntry: './src/entry.vue' } }),
+  ],
+});
+```
+
+```ts
+// src/main.ts
+import { createApp } from 'vue';
+import { registerNexusRemote } from '@bimo-dk/nexus-runtime-vue';
+import App from './app.vue';
+
+registerNexusRemote({ name: 'checkout', url: '/remoteEntry.json', exposedModule: './RemoteEntry', routePath: 'checkout' });
+createApp(App).mount('#app');
+```
+
+Full guide: [Vue remote in 5 minutes](getting-started/quick-start-vue.md).
+
+### React remote
+
+```ts
+// vite.config.ts
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import { nexusVite } from '@bimo-dk/nexus-build/vite';
+
+export default defineConfig({
+  plugins: [
+    react(),
+    nexusVite({ name: 'checkout', exposes: { RemoteEntry: './src/entry.tsx' } }),
+  ],
+});
+```
+
+```tsx
+// src/main.tsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { registerNexusRemote } from '@bimo-dk/nexus-runtime-react';
+import App from './app.js';
+
+registerNexusRemote({ name: 'checkout', url: '/remoteEntry.json', exposedModule: './RemoteEntry', routePath: 'checkout' });
+ReactDOM.createRoot(document.getElementById('root')!).render(<App />);
+```
+
+Full guide: [React remote in 5 minutes](getting-started/quick-start-react.md).
 
 ---
 
-## What's in the platform
+## One registry, the entire frontend estate
 
-```
-        Browser
-           |
-           v
-    +-------------+
-    |   gateway   |  :8668  (public entry — nginx + thin Angular)
-    +-------------+
-           |
-           |  /host/*       -> host (layout shell)
-           |  /remotes/*    -> a remote (micro frontend)
-           |  /api/*        -> registry HTTP API
-           |  /ws           -> registry WebSocket
-           v
-    +-------------+   +-------------+   +-------------+
-    |    host     |   |  remote-X   |   |  registry   |
-    +-------------+   +-------------+   +-------------+
-           ^
-           |  fetches enabled remotes
-           +-- WebSocket /ws — live config updates
-                       |
-                +-------------+
-                |   portal    |  :8669  (admin UI + component catalog)
-                +-------------+
+A single Nexus registry instance manages:
+
+- Unlimited **hosts** — shell applications in any of the three frameworks.
+- Unlimited **gates** — public domains. Many gates can point to the same host, so multi-tenant or multi-brand sites share one application.
+- Unlimited **remotes** — micro frontends. A remote is either *global* (every host can use it) or *host-specific* (locked to one host).
+
+```mermaid
+graph LR
+  subgraph Public
+    G1[checkout.example.com<br/>gate]
+    G2[admin.example.com<br/>gate]
+    G3[partner.example.com<br/>gate]
+  end
+
+  subgraph Hosts
+    H1[Storefront<br/>Angular host]
+    H2[Admin<br/>Vue host]
+  end
+
+  subgraph Remotes
+    R1[orders<br/>Vue remote]
+    R2[checkout<br/>React remote]
+    R3[catalog<br/>Angular remote]
+    R4[users<br/>Vue remote]
+  end
+
+  G1 --> H1
+  G2 --> H2
+  G3 --> H1
+
+  H1 --> R1
+  H1 --> R2
+  H1 --> R3
+  H2 --> R4
+  H2 --> R3
 ```
 
-| Piece | What it is | Where it lives |
+Three public domains. Two host applications written in different frameworks. One catalog remote shared across both. The operator changes any of it from the portal — no rebuild, no restart.
+
+---
+
+## Why Rust under the hood
+
+The previous Node/Express implementation of the registry and the nginx implementation of the gateway both worked. We replaced them anyway, because at platform scale the cost is paid every day.
+
+| Metric | Before (Node / nginx) | After (Rust) | Why it matters |
+|---|---|---|---|
+| Registry RSS at idle | 80–120 MB | 5–15 MB | A platform instance fits inside a side-car. |
+| Registry cold start | ~800 ms | ~20 ms | Faster recovery from rolling restarts. |
+| Gateway request latency p99 | nginx reload pauses | sub-millisecond hot-swap | Routes change without a single dropped connection. |
+| WebSocket fan-out | event-loop bound | `tokio` task per connection | Tens of thousands of concurrent subscribers per instance. |
+| Config reload | edit nginx.conf + reload | API call, hot-applied | The portal can change behavior at runtime. |
+
+These are measurements, not slogans. See [infra-high-availability](infrastructure/infra-high-availability.md) for the test methodology.
+
+---
+
+## What the platform is made of
+
+```mermaid
+graph TB
+  Browser --> Gateway
+  Gateway -->|HTTP| Host
+  Gateway -->|HTTP| RemoteVue[Vue remote]
+  Gateway -->|HTTP| RemoteReact[React remote]
+  Gateway -->|HTTP| RemoteNg[Angular remote]
+  Gateway -->|REST + WS| Registry
+  Host -->|REST + WS| Registry
+  Portal -->|REST + WS| Registry
+  Registry --> DB[(SQLite / PostgreSQL)]
+
+  classDef rust fill:#cf6a32,stroke:#7a3d1a,color:#fff
+  classDef ui fill:#1d4ed8,stroke:#1e40af,color:#fff
+  classDef data fill:#374151,stroke:#1f2937,color:#fff
+  class Gateway,Registry rust
+  class Host,RemoteVue,RemoteReact,RemoteNg,Portal ui
+  class DB data
+```
+
+| Component | Stack | What it does |
 |---|---|---|
-| **Gateway** | Public entry, nginx reverse-proxy + minimal Angular shell | [`nexus-gateway`](services/gateway.md) |
-| **Host** | Layout shell that federates remotes at runtime | [`nexus-host-template`](services/host.md) |
-| **Registry** | Source of truth — Node/Express + WebSocket broadcast | [`nexus-registry`](services/registry.md) |
-| **Portal** | Admin Angular app: dashboard, metrics, remote CRUD, component catalog | [`nexus-portal`](services/portal.md) |
-| **Remote template** | Starter app cloned by `bnx generate remote` | [`nexus-remote-templat`](services/remotes.md) |
-| **Dev proxy** | Local hot-reload proxy — one remote local, everything else staging | [`nexus-proxy`](services/proxy.md) |
-| **Base image** | Shared Docker base for every service | [`nexus-base-image`](services/base-image.md) |
-| **Packages** | 7 published packages (core, client, build, runtime, ui, testing, cli) | [`nexus-packages`](packages/overview.md) |
-| **Example** | NexusShop — 5-remote webshop demo showing nexusRoute, `<nexus-component>` and cross-remote composition | [`nexus-example`](workflows/example-playground.md) |
+| Gateway | Rust + axum + hyper | Public ingress. Builds its proxy table from the registry. Seven DDoS layers. |
+| Registry | Rust + axum + sqlx | Source of truth for hosts, gates, remotes, and all runtime config. |
+| Portal | Angular 19 | Admin UI. Manages every entity, every config, every protection setting. |
+| Hosts | Angular 19, Vue 3, React 18 | Shell applications. Load remotes at runtime. |
+| Remotes | Angular 19, Vue 3, React 18 | Micro frontends. Register themselves at startup. |
+| Packages | `@bimo-dk/nexus-*` (10 packages) | Adapter SDKs, decorators, build plugins, CLI, test utilities. |
 
 ---
 
-## When it fits
+## Features
 
-- One product, several teams contribute — each owns their own pipeline and Docker image.
-- The user must never see a deployment break — remotes are loaded by URL at runtime.
-- A team can spin up locally and work on **only their remote** while everything else runs in shared staging.
-- You want a searchable cross-team catalog of "what components do we have?" without standing up a separate Storybook deployment.
-- You need the boring stuff (auth header, correlation id, fallback chain, health checks, structured logs, metrics) without writing it yourself.
+<div className="nexus-grid">
+  <div className="nexus-card">
+    <h3>Multi-framework</h3>
+    <p>Angular 19, Vue 3, React 18. Mixed-stack hosts are first class.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Rust-powered</h3>
+    <p>Registry and gateway in Rust. Sub-millisecond hot-route swap.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Multi-domain via gates</h3>
+    <p>Many public domains, one application. Per-domain branding, per-domain headers.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>DDoS protection built in</h3>
+    <p>Seven layers: IP bans, connection limits, rate limits, payload caps, header caps, timeouts, WebSocket caps.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Live configuration</h3>
+    <p>Every protection setting, every rate limit, every breaker is hot-reloadable from the portal.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Prometheus metrics</h3>
+    <p>Native /metrics on both registry and gateway. Drop into your dashboards.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>High availability</h3>
+    <p>SQLite today. PostgreSQL with LISTEN/NOTIFY for multi-instance registry on the migration path.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Zero-downtime deploys</h3>
+    <p>Cache headers and route hot-swap let you ship a remote without dropping a request.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Component catalog</h3>
+    <p>@NexusComponent (or the catalog field on nexusVite) publishes a discoverable component inventory.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>CLI scaffolding</h3>
+    <p>bnx generate, bnx dev, bnx hosts, bnx gates, bnx publish, bnx status, bnx health.</p>
+  </div>
+</div>
 
 ---
 
-## What's next
+## Where to next
 
-- [Why Nexus over plain Native Federation](getting-started/why-nexus.md) — the value-add in numbers.
-- [Setup & install](getting-started/installation.md) — get everything running locally in 5 minutes.
-- [Architecture deep dive](getting-started/architecture.md) — request flow, deploy flow, fallback chain, security.
-- [Create a new remote](workflows/create-remote.md) — end-to-end with `bnx`.
-- [Component catalog](workflows/component-catalog.md) — `@NexusComponent`, `<nexus-component>`, the portal catalog.
-- [Loading patterns](workflows/loading-patterns.md) — route-based, tag-based, programmatic.
+- **[Read the Angular quick start](getting-started/quick-start-angular.md)** — five minutes from `git clone` to a running remote.
+- **[Read the Vue quick start](getting-started/quick-start-vue.md)** — five minutes from `git clone` to a running remote.
+- **[Read the React quick start](getting-started/quick-start-react.md)** — five minutes from `git clone` to a running remote.
+- **[Skip to the mixed-stack guide](guides/guide-mixed-stack.md)** — Angular host loading Vue and React remotes, end to end.
+- **[Compare against Module Federation, single-spa, Bit, Nx](compare/compare-module-federation.md)** — honest, side by side.
 
 ---
 
-## About
+## License and source
 
-Nexus is developed and maintained by **Bimo**. Built to give multi-team Angular products an honest path to micro frontends — no proprietary runtime, no lock-in, just sensible defaults on top of an ESM federation spec.
-
-MIT-licensed. Free to use, free to fork, contributions welcome.
+MIT-licensed. Source code: https://github.com/Bimo-dk/nexus. Built and maintained by [Bimo](https://bimo.dk).

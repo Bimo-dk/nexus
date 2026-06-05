@@ -2,121 +2,99 @@
 id: why-nexus
 title: Why Nexus
 sidebar_position: 1
-description: What Native Federation alone does not give you, and how Nexus fills the gap — registry, WebSocket broadcast, admin UI, dev proxy, catalog, zero-downtime cache. Honest tradeoffs and comparison with alternatives.
-keywords: [Angular micro frontend, why micro frontend, Native Federation vs Nexus, micro frontend registry, micro frontend architecture]
+description: What Module Federation, single-spa, and Native Federation alone do not give you. Why Nexus exists, what it adds, and the honest tradeoffs.
+keywords:
+  - micro frontend
+  - micro frontend platform
+  - module federation alternative
+  - native federation
+  - Angular micro frontend
+  - Vue micro frontend
+  - React micro frontend
+  - micro frontend registry
+  - micro frontend gateway
 ---
 
 # Why Nexus
 
-Plain [Native Federation](https://www.npmjs.com/package/@angular-architects/native-federation) gives you ESM module sharing between Angular apps. It does **not** give you:
+Module Federation, Native Federation, single-spa, Bit, Nx — they each solve *one* aspect of running micro frontends in production. None of them solve the operational layer: the registry, the routing, the protection, the framework boundary, the dev loop. Nexus is the layer that turns federation primitives into a platform you can hand to a multi-team product organization without each team rebuilding the same plumbing.
 
-- A registry that the host can poll/subscribe to
-- A way to add or remove remotes without a host rebuild
-- A working local dev story for one-team-at-a-time
-- A token-aware HTTP client + WS reconnect logic
-- An admin UI for ops
-- A discoverable cross-remote component catalog
-- A zero-downtime deploy story baked into the cache layer
-- A fallback chain when the registry is unreachable
-
-Nexus is the layer that turns Native Federation into a product you can hand to a multi-team org without each team rebuilding the same plumbing.
-
----
-
-## What you do NOT have to do
+## What you do not have to build
 
 | You don't write | Because Nexus provides |
 |---|---|
-| `federation.config.json` by hand | `@NexusRemote()` + `nexus-build` CLI generates it |
-| Registry sync code in the host | `provideNexusHost({...})` does it in one provider |
-| WebSocket reconnect with backoff | `RegistryWebSocketService` ships with exponential backoff |
-| Token-injecting HTTP interceptor | `nexusAuthInterceptor` is bundled in `provideNexusHost/Remote` |
-| Per-request correlation ID | `correlationIdInterceptor` issues UUID v4 per request, registry logs it |
-| Static-backup fallback when registry is down | Three-layer chain (live → cache → static) wired in `RegistryService` |
-| `loadRemoteModule()` glue + cache + error UI | `<nexus-component>` tag |
-| Route-based federation lazy-load | `nexusRoute({ path, remote, expose })` |
-| Catalog UI ("what components exist?") | `@NexusComponent({...})` + portal `/catalog` page |
-| Health-check loop + metrics endpoint | Registry's `/api/system/{health,metrics,logs}` |
+| A federation manifest per remote | `@NexusRemote()` (Angular) or `nexusVite({ name, exposes })` (Vue / React) — config is generated at build time |
+| A WebSocket client with reconnect logic | `@bimo-dk/nexus-client` ships `RegistryWebSocket` with exponential backoff |
+| A token-aware HTTP layer | `provideNexusHost()`, `createNexusPlugin()`, `NexusProvider` inject the auth header for you |
+| A registry sync loop in the host | `provideNexusHost()` / Vue plugin / React provider does it in one line |
+| A fallback chain when the registry is down | Three layers: live → sessionStorage cache → static backup, baked into the runtime |
+| A framework-agnostic loader | `@bimo-dk/nexus-runtime-core` does the federation glue once, each framework adapter wraps it |
+| nginx config for every new remote | Gateway reads the route table from the registry and hot-swaps on every change |
+| DDoS protection middleware | Seven layers shipped in the Rust gateway, configurable from the portal |
+| A health-check loop | Built into the registry, exposed at `/health` and on the portal |
+| A Prometheus exporter | Native `/metrics` on both registry and gateway |
+| A multi-domain routing layer | Gates: one application, many public domains |
+| An admin UI | The portal — manages hosts, gates, remotes, protection, configuration |
+| A dev mode for one team at a time | `bnx dev` runs your remote locally against shared staging |
+| A scaffold for each framework | `bnx generate remote` with framework selection |
 
----
+That is what Nexus *removes*. What it *adds* is one mental model — gates, hosts, remotes — that maps to how product organizations actually think about a frontend estate.
 
 ## What it costs you
 
 Honest tradeoffs:
 
-- **You buy into the Angular 19 + Native Federation stack.** Nexus does not abstract the federation layer — it codifies it. A future major bump on `@angular/core` requires a coordinated upgrade across host + remotes (same as without Nexus, but more services to touch).
-- **`@bimo-dk/*` packages live on GitHub Packages**, not the public npm registry. Every consuming repo needs `.npmrc` + a PAT with `read:packages`. The Dockerfiles use BuildKit secrets to keep this clean — see [security](../reference/security.md).
-- **The token model is symmetric.** Anyone with `NEXUS_TOKEN` can mutate the registry. A per-user identity model is on the roadmap; for now, treat the token like a database password.
-- **The gateway is the choke point.** Restarting it is a few seconds of "Connection refused" — fine for staging, plan blue/green for prod. Everything else (remotes, host, registry) is zero-downtime.
+- **You buy into the three frameworks Nexus supports today.** Angular 19, Vue 3, React 18. If your stack is Svelte or Solid, you'd need to write an adapter against `@bimo-dk/nexus-runtime-core` first. (The runtime-core surface is small — under 500 lines.)
+- **The `@bimo-dk/*` packages live on GitHub Packages.** Every consuming repo needs `.npmrc` + a personal access token with `read:packages`. The Dockerfiles use BuildKit secrets to keep this clean.
+- **The registry is the source of truth.** Lose the registry's database file and you lose your host/gate/remote configuration. Back it up. SQLite is the default; a PostgreSQL migration path is on the roadmap for HA — see [infra-high-availability](../infrastructure/infra-high-availability.md).
+- **The token model is currently symmetric.** Anyone with `NEXUS_TOKEN` can mutate the registry. A per-identity model is on the roadmap; for now, treat the token like a database password and rotate it via the portal.
 
----
+## When Nexus is not the right answer
+
+- **You ship a single-team, single-framework SPA.** You don't have a federation problem. Skip the platform.
+- **You ship purely server-rendered pages.** Nexus loads ES modules in the browser. SSR is supported in the host framework, but the federation boundary is client-side.
+- **You need detection-evading client-side code splitting.** Nexus is transparent — every remote shows up in DevTools.
 
 ## A multi-team workflow, end to end
 
-```
-┌────────────────────────┐
-│ Team A (checkout)      │  pushes to ghcr.io/teamA/checkout:1.4.2
-│ owns: checkout repo    │     │
-└────────────────────────┘     │ CI deploys to staging
-                               ▼
-                       docker compose pull checkout
-                       docker compose up -d --no-deps checkout
-                               │
-                               │ container boots
-                               │ provideNexusRemote(...) calls
-                               │ POST /api/remotes (or PUT if existing)
-                               ▼
-                       registry persists, writes broadcast
-                               │
-                               │ WebSocket "remotes_changed"
-                               ▼
-                       host (in every open browser tab)
-                       registers the new route
-                               │
-                               ▼
-                       next user navigation hits new bundle
-                       (cache: no-store on remoteEntry.json)
+```mermaid
+sequenceDiagram
+  participant Team as Team A (checkout)
+  participant CI as CI / Registry
+  participant R as Nexus Registry
+  participant H as Host (browser tab)
+  participant G as Gateway
+
+  Team->>CI: docker push ghcr.io/teamA/checkout:1.4.2
+  CI->>R: container boots, POST /api/remotes
+  R-->>G: WebSocket: remotes_changed
+  R-->>H: WebSocket: remotes_changed
+  G->>G: hot-swap route table (sub-ms)
+  H->>H: add route, no reload
+  Note right of H: User navigates to /checkout<br/>new bundle served from new container
 ```
 
-**No host restart. No registry restart. No gateway restart. No user reload.**
+No host restart. No registry restart. No gateway restart. No user reload.
 
-Team B sees Team A's component in the portal's catalog the moment Team A's container starts — because `catalog.json` is published next to `remoteEntry.json`. Team B can drop it into their own remote with:
+Team B sees Team A's component in the portal catalog the moment Team A's container starts. Team B drops it into their own remote with one line:
 
 ```html
 <nexus-component remote="checkout" expose="CartSummary" [inputs]="{ compact: true }" />
 ```
 
----
-
-## Compared with alternatives
-
-| | Nexus | Plain Native Federation | Single Webpack Module Federation | Build-time monorepo |
-|---|---|---|---|---|
-| Independent deploys | ✓ | ✓ | partial (host rebuild often needed) | ✗ |
-| Runtime add/remove of remotes | ✓ (registry + WS) | ✗ | partial | ✗ |
-| Zero-downtime cache strategy | ✓ (nginx `no-store` baked in) | DIY | DIY | n/a |
-| Cross-team component discovery | ✓ (catalog) | ✗ | ✗ | ✓ (in-repo) |
-| Local dev (one remote, rest staging) | ✓ (`bnx dev`) | DIY | very painful | n/a |
-| Admin UI | ✓ (portal) | ✗ | ✗ | n/a |
-| Vendor lock-in | none (MIT, all-open) | none | webpack | none |
-
----
-
 ## Adoption shape
 
 A typical adoption is incremental:
 
-1. **Week 1 — stand up the orchestrator.** Run `docker compose up` from the `nexus` repo. Existing apps are not touched yet.
-2. **Week 2 — first remote.** One team scaffolds with `bnx generate remote`, deploys, registers. The portal shows it.
-3. **Month 2 — convert the layout shell.** Existing monolith's outer chrome becomes the host. Inner pages move to remotes one at a time.
-4. **Month 3+ — catalog adoption.** Teams add `@NexusComponent()` to components they think other teams might want. The catalog populates organically; cross-team reuse becomes possible.
+1. **Week 1.** Stand up the orchestrator. `docker compose up` from the `nexus` repo. Existing apps untouched.
+2. **Week 2.** First remote. One team scaffolds with `bnx generate remote`, deploys, registers. The portal shows it.
+3. **Month 2.** Convert the layout shell. Your existing monolith's outer chrome becomes the host. Inner pages move to remotes one at a time.
+4. **Month 3+.** Catalog adoption. Teams add `@NexusComponent()` or the catalog field on `nexusVite` to components they think others might want. The catalog populates organically; cross-team reuse becomes possible.
 
-You do not have to go all-in on day one. The registry happily serves a single remote.
-
----
+You do not go all-in on day one. The registry happily serves a single remote.
 
 ## Next
 
-- [Installation](installation.md) — `docker compose up --build`, five minutes.
-- [Architecture deep dive](architecture.md) — every box, every arrow.
-- [Component catalog](../workflows/component-catalog.md) — what unlocks once you tag components.
+- [Overview](overview.md) — the three-entity mental model in detail.
+- [Installation](installation.md) — `docker compose up` in five minutes.
+- [Architecture](architecture.md) — every box, every arrow.

@@ -1,149 +1,101 @@
 ---
 id: proxy
-title: Dev Proxy
+title: nexus-proxy
 sidebar_position: 6
-description: The Nexus dev proxy — run one Angular remote locally with HMR while the rest of the stack runs on shared staging. One command, no Docker, no local dependencies for other services.
-keywords: [Angular micro frontend dev proxy, micro frontend local development, Angular hot reload federation, bnx dev]
+description: The nexus-proxy repository — the hot-reload dev proxy that lets you develop one remote locally against shared staging.
+keywords:
+  - micro frontend dev proxy
+  - hot reload micro frontend
+  - bnx dev
+  - micro frontend local dev
 ---
 
-# Dev Proxy
+# nexus-proxy
 
-Repo: [`nexus-proxy`](https://github.com/Bimo-dk/nexus-proxy)
+The `nexus-proxy` repository ships the hot-reload dev proxy used by `bnx dev`. It transparently routes most traffic to your shared staging environment while pulling specific remotes from your local dev server.
 
-The **dev proxy** is the second-best feature of Nexus (after the registry, debatable). It lets you run *one* remote on your machine with hot reload while everything else — host, registry, all other remotes — is served by a shared staging environment.
+## What it does
 
-You point your browser at `http://localhost:9000` and see the full application. The remote you are working on streams from your local `ng serve` and supports HMR; everything else is your team's deployed stack.
+```mermaid
+graph LR
+  Browser --> Proxy[nexus-proxy<br/>:9000]
+  Proxy -- "/remotes/checkout/*" --> Local[Local dev server :8700]
+  Proxy -- "everything else" --> Staging[Shared staging<br/>nexus-staging.example.com]
+```
 
-## Why this matters
+You open `http://localhost:9000`, see the whole staging application, but the routes for the remotes you're working on come from your local dev server with HMR. Nothing you do affects the shared environment.
 
-The traditional micro-frontend dev story is painful:
+## Repository layout
 
-- Start the host
-- Start the registry
-- Start every remote
-- Configure half a dozen `proxy.conf.json` files
+```
+nexus-proxy/
+├── src/
+│   ├── proxy.ts             # core proxy
+│   ├── routing.ts           # rules
+│   ├── config.ts            # nexus.config.json loader
+│   └── index.ts
+├── package.json
+└── tsconfig.json
+```
 
-Within five minutes you've spent an afternoon on plumbing. The Nexus dev proxy collapses it to:
+The package is also distributed as part of `@bimo-dk/nexus-cli` so you can use it via `bnx dev` without installing it standalone.
+
+## Usage (via `bnx dev`)
 
 ```bash
-npm run dev:catalog
+cd my-host
+bnx dev
 ```
 
-You see the entire app, but only your remote is local.
+Reads `nexus.config.json` from the current directory and starts the proxy on the configured port (default 9000). Autostarts any local remotes with `autostart: true` and binds them in the route table.
 
-## How it works
+See [packages: nexus-cli](../packages/nexus-cli.md) for the full `nexus.config.json` schema.
 
-```
-browser ──────► localhost:9000 (dev proxy)
-                  │
-   /remotes/catalog/* ──► localhost:8700  (your local ng serve, HMR)
-   /remotes/*/         ──► <shared env>   (all other remotes, auto-discovered)
-   /host/*             ──► <shared env>
-   /api/*              ──► <shared env>
-   /ws                 ──► <shared env>   (websocket upgrade)
-   everything else     ──► <shared env>
+## Usage (standalone)
+
+```bash
+npx @bimo-dk/nexus-proxy --config ./nexus.config.json --port 9000
 ```
 
-The proxy is a small Express server using `http-proxy-middleware`. It reads `nexus.dev.json`, maps every `local` remote to a local port, and forwards everything else to `remote.url`.
-
-The proxy fetches the remote list from the registry at startup and creates routes for all enabled remotes. Only the ones listed in `local` are intercepted to your machine — everything else forwards to the shared env.
-
-## Configuration — `nexus.dev.json`
+## Configuration
 
 ```jsonc
 {
-  "proxyPort": 9000,
-  "local": {
-    "catalog": 8700
+  "environments": {
+    "staging": {
+      "publicUrl": "https://nexus-staging.example.com",
+      "tokenEnv": "NEXUS_STAGING_TOKEN"
+    }
   },
-  "remote": {
-    "url": "http://localhost:8668"
-  },
-  "logRouting": true
-}
-```
-
-Only list the remote you are actively developing in `local`. All other remotes from the registry are forwarded to `remote.url` automatically — you don't need to list them.
-
-| Field | Description |
-|---|---|
-| `proxyPort` | Port the proxy listens on. Default `9000`. |
-| `local` | Map of `<remote-name>` → local port. Each entry bypasses `remote.url`. |
-| `remote.url` | Shared environment. Use staging URL for a realistic setup. |
-| `remote.registryApiPath` | Default `/api`. Override if the staging registry lives elsewhere. |
-| `logRouting` | `true` to log every request's destination. |
-
-The CLI helper `dev-tools/switch-local.mjs` rewrites the `local` block atomically — used by the npm scripts so you can do `npm run dev:cart` without manually editing JSON.
-
-## Token & correlation passthrough
-
-The proxy forwards `X-Nexus-Token` and `X-Request-ID` to the shared env on every request. WebSockets are upgraded through with the same handlers. CORS is set wide-open (`*`) since this is a developer-only tool.
-
-## Pointing at staging
-
-Edit `remote.url` to your staging URL:
-
-```jsonc
-{
-  "remote": { "url": "https://nexus-staging.example.com" }
-}
-```
-
-Restart the proxy. Now your local remote hits the staging registry, host and other remotes.
-
-## Hot reload
-
-When you edit code in the locally running remote (e.g. `remote-catalog/src/...`), Angular's dev server reloads. The proxy does not need a restart — it does not read files; it only proxies URLs.
-
-If you edit code on the proxy itself, restart it with `Ctrl+C` and re-run the npm script.
-
-## Adding a new `dev:remote-X` script
-
-In the `nexus` orchestrator's root `package.json`:
-
-```json
-{
-  "scripts": {
-    "dev:remote-three": "node dev-tools/switch-local.mjs remoteThree 8700 && concurrently \"cd remote-three && npm start\" \"npm run dev:proxy\""
+  "dev": {
+    "baseEnv": "staging",
+    "proxyPort": 9000,
+    "remotes": {
+      "checkout": { "port": 4201, "path": "./packages/checkout", "autostart": true },
+      "orders":   { "port": 4202, "path": "./packages/orders",   "autostart": false }
+    },
+    "logRouting": true
   }
 }
 ```
 
-`switch-local.mjs` accepts `<name> <port>` and atomically rewrites the `local` block to that one entry. You do not need to add anything else — all other remotes in the registry are forwarded to the shared env automatically.
+When the proxy starts:
 
-## Output
+1. Reads `nexus.config.json`.
+2. Confirms each remote is reachable on its local port.
+3. Optionally autostarts any with `autostart: true`.
+4. Binds the proxy:
+   - `/remotes/<name>/*` → `http://localhost:<port>/<rest>` for every locally-running remote.
+   - Everything else → `baseEnv.publicUrl/<rest>`.
+5. Opens your browser.
 
-```
-╭───────────────────────────────────────────────────────────
-│  Nexus Dev Proxy
-├───────────────────────────────────────────────────────────
-│  Listening:  http://localhost:9000
-│  Shared:     http://localhost:8668
-│  Local:
-│    /remotes/catalog/* -> http://localhost:8701
-╰───────────────────────────────────────────────────────────
+Ctrl+C stops the proxy and any autostarted dev servers.
 
-[nexus-proxy] GET    /remotes/catalog/remoteEntry.json       -> LOCAL catalog (http://localhost:8701)
-[nexus-proxy] GET    /host/remoteEntry.json                  -> SHARED (http://localhost:8668)
-[nexus-proxy] POST   /api/remotes                            -> SHARED (http://localhost:8668)
-```
+## Why a separate proxy
 
-## When the shared env goes down
+The alternative is editing the registry to point at your local dev server. That works once but breaks for everyone else — you'd be mutating shared state. The dev proxy lets you "override" remote selection per-developer without touching the registry.
 
-Each shared-env request that fails returns a clear `502`:
+## Next
 
-```json
-{
-  "error": "shared_environment_unreachable",
-  "target": "http://localhost:8668",
-  "message": "connect ECONNREFUSED 127.0.0.1:8668",
-  "path": "/api/remotes"
-}
-```
-
-The proxy does not crash — open DevTools to see exactly which request failed.
-
-## See also
-
-- [Local dev workflow](../workflows/dev-mode.md) — full step-by-step.
-- [`@bimo-dk/nexus-cli`](../packages/nexus-cli.md) — `bnx dev` is the spiritual successor and orchestrates this proxy from a per-app config file (`nexus.config.json`).
+- [Packages: nexus-cli](../packages/nexus-cli.md) — the bnx dev wrapper.
+- [Workflows: dev-mode](../workflows/dev-mode.md) — operator's recipe.

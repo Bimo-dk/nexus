@@ -13,7 +13,7 @@
     "down:volumes": "docker compose down -v",
     "logs": "docker compose logs -f",
     "ps": "docker compose ps",
-    "health": "curl -s http://localhost:3000/health",
+    "health": "curl -s http://localhost:8670/health",
 
     "tools:install": "cd nexus-tools && npm install && npm run build && cd ../dev-tools && npm install",
     "tools:build": "cd nexus-tools && npm run build",
@@ -38,6 +38,8 @@
   "dependencies": {
     "@docusaurus/core": "^3.6.0",
     "@docusaurus/preset-classic": "^3.6.0",
+    "@docusaurus/theme-mermaid": "^3.6.0",
+    "@easyops-cn/docusaurus-search-local": "^0.46.1",
     "@mdx-js/react": "^3.0.0",
     "clsx": "^2.1.1",
     "prism-react-renderer": "^2.4.0",
