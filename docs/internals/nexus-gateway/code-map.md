@@ -13,7 +13,7 @@ keywords:
 
 Companion to [architecture](./architecture.md). Open this when you're about to touch a file and want to know what it owns and what touches it.
 
-The crate is a single binary, `nexus-gateway`. Entry point is `src/main.rs`. Everything below is relative to `nexus-gateway/`.
+Source: [Bimo-dk/nexus-gateway](https://github.com/Bimo-dk/nexus-gateway). The crate is a single binary, `nexus-gateway`. Entry point is `src/main.rs`. Everything below is relative to `nexus-gateway/`.
 
 ## Top level
 

@@ -15,7 +15,7 @@ keywords:
 
 For tenants the gateway is a black box documented under [infrastructure/gateway](../../infrastructure/infra-gateway.md). This page is for the person who has to change its code.
 
-Code: `nexus-gateway/`. Stack: Rust 2021, [axum 0.7](https://docs.rs/axum/0.7), [hyper 1](https://docs.rs/hyper/1), [tokio](https://tokio.rs), [tokio-tungstenite](https://docs.rs/tokio-tungstenite), [dashmap](https://docs.rs/dashmap), [tower-http](https://docs.rs/tower-http), [prometheus](https://docs.rs/prometheus).
+Source: [Bimo-dk/nexus-gateway](https://github.com/Bimo-dk/nexus-gateway). Local path in the workspace: `nexus-gateway/`. Stack: Rust 2021, [axum 0.7](https://docs.rs/axum/0.7), [hyper 1](https://docs.rs/hyper/1), [tokio](https://tokio.rs), [tokio-tungstenite](https://docs.rs/tokio-tungstenite), [dashmap](https://docs.rs/dashmap), [tower-http](https://docs.rs/tower-http), [prometheus](https://docs.rs/prometheus).
 
 ## Process model
 

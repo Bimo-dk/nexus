@@ -14,7 +14,7 @@ keywords:
 
 Companion to [architecture](./architecture.md). Use this to find the right file before you change anything.
 
-The crate is a single binary, `nexus-registry`. Entry point is `src/main.rs`. Everything below is relative to `nexus-registry/`.
+Source: [Bimo-dk/nexus-registry](https://github.com/Bimo-dk/nexus-registry). The crate is a single binary, `nexus-registry`. Entry point is `src/main.rs`. Everything below is relative to `nexus-registry/`.
 
 ## Top level
 

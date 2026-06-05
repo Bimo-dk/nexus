@@ -15,7 +15,7 @@ keywords:
 
 Tenant-facing docs live under [infrastructure/registry](../../infrastructure/infra-registry.md). This page is for the person about to change the registry's code.
 
-Code: `nexus-registry/`. Stack: Rust 2021, [axum 0.8](https://docs.rs/axum/0.8), [sqlx 0.9](https://docs.rs/sqlx/0.9) (SQLite, tokio runtime), [tokio](https://tokio.rs) with `broadcast` channels, [tower-http](https://docs.rs/tower-http) (CORS, trace), [governor](https://docs.rs/governor) for rate limiting, [reqwest](https://docs.rs/reqwest) for outbound health probes, [prometheus](https://docs.rs/prometheus), [tracing](https://docs.rs/tracing).
+Source: [Bimo-dk/nexus-registry](https://github.com/Bimo-dk/nexus-registry). Local path in the workspace: `nexus-registry/`. Stack: Rust 2021, [axum 0.8](https://docs.rs/axum/0.8), [sqlx 0.9](https://docs.rs/sqlx/0.9) (SQLite, tokio runtime), [tokio](https://tokio.rs) with `broadcast` channels, [tower-http](https://docs.rs/tower-http) (CORS, trace), [governor](https://docs.rs/governor) for rate limiting, [reqwest](https://docs.rs/reqwest) for outbound health probes, [prometheus](https://docs.rs/prometheus), [tracing](https://docs.rs/tracing).
 
 ## Process model
 
