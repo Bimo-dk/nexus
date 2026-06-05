@@ -115,6 +115,27 @@ const sidebars: SidebarsConfig = {
     'compare/compare-bit',
     'compare/compare-nx-monorepo',
   ],
+
+  internalsSidebar: [
+    {
+      type: 'category',
+      label: 'nexus-gateway',
+      collapsed: false,
+      items: [
+        'internals/nexus-gateway/architecture',
+        'internals/nexus-gateway/code-map',
+      ],
+    },
+    {
+      type: 'category',
+      label: 'nexus-registry',
+      collapsed: false,
+      items: [
+        'internals/nexus-registry/architecture',
+        'internals/nexus-registry/code-map',
+      ],
+    },
+  ],
 };
 
 export default sidebars;

@@ -104,6 +104,7 @@ That's it. Federation, registration, route propagation, gateway proxy, cache, fa
 | [Workflows](./docs/workflows/create-remote-angular.md) | Create per framework, dev mode, zero-downtime, multi-domain, protection |
 | [Reference](./docs/reference/environment.md) | Env vars, config, HTTP API, WebSocket messages, security, troubleshooting |
 | [Compare](./docs/compare/compare-module-federation.md) | vs Module Federation, single-spa, Bit, Nx monorepo |
+| [Internals](./docs/internals/nexus-gateway/architecture.md) | Per-service module layout and code maps — for contributors changing the Rust services |
 
 ---
 

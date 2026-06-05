@@ -252,6 +252,12 @@ const config: Config = {
           label: 'Compare',
         },
         {
+          type: 'docSidebar',
+          sidebarId: 'internalsSidebar',
+          position: 'left',
+          label: 'Internals',
+        },
+        {
           href: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}`,
           label: 'GitHub',
           position: 'right',
