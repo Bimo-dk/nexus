@@ -31,12 +31,12 @@ sequenceDiagram
   participant B as Browser tab
 
   CI->>New: start container with REGISTRY_INTERNAL_URL set
-  New->>R: POST /api/remotes (self-register; or PUT if updating)
+  New->>R: POST /api/remotes (self-register or upsert)
   R-->>G: WS remotes_changed
   R-->>B: WS remotes_changed
   G->>G: hot-swap route table (sub-ms)
   B->>B: refresh in-router route
-  Note over B: User clicks "Checkout" -> new bundle loads
+  Note over B: User clicks Checkout, new bundle loads
 ```
 
 ## The cache rules

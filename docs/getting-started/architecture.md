@@ -26,16 +26,16 @@ sequenceDiagram
   participant R as Registry (Rust)
   participant Rem as Remote
 
-  B->>G: GET https://shop.example.com/
-  Note over G: Resolve domain -> gate -> host
-  G->>H: Proxy / -> host upstream
-  H-->>B: index.html + JS shell
+  B->>G: GET shop.example.com/
+  Note over G: Resolve domain, gate, host
+  G->>H: Proxy / to host upstream
+  H-->>B: index.html plus JS shell
   B->>G: GET /api/remotes
-  G->>R: Proxy /api -> registry
+  G->>R: Proxy /api to registry
   R-->>B: list of enabled remotes
   B->>G: WS /ws (subscribe)
-  G->>R: Proxy WS -> registry
-  Note over B: Host bootstraps. For each remote:
+  G->>R: Proxy WS to registry
+  Note over B: Host bootstraps. For each remote
   B->>G: GET /remotes/checkout/remoteEntry.json
   G->>Rem: Proxy to upstream
   Rem-->>B: federation manifest
