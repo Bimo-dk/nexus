@@ -2,53 +2,69 @@
 id: architecture
 title: Architecture
 sidebar_position: 4
-description: Deep dive into the Nexus architecture — request flow through the gateway, cold start vs live update timelines, three-layer fallback chain, zero-downtime deploy flow, and the security model.
-keywords: [Angular micro frontend architecture, micro frontend request flow, Native Federation architecture, zero-downtime micro frontend]
+description: Deep dive into the Nexus architecture. Request flow through the Rust gateway, registry data model, framework boundary handling, fallback chain, and the multi-tenant gate routing layer.
+keywords:
+  - micro frontend architecture
+  - micro frontend request flow
+  - Rust web server
+  - micro frontend gateway
+  - micro frontend registry
+  - zero downtime deployment
 ---
 
 # Architecture
 
-## Request flow at runtime
+This page is the wire-level picture of what Nexus does at runtime. If you only want the conceptual model, read [Overview](overview.md) first.
 
-```
-Browser
-  │
-  │ 1. GET /                       (HTML shell)
-  ▼
-gateway:80
-  │  └─ serves dist/app/browser/index.html (its own SPA)
-  │
-  │ 2. /assets/config.json         (runtime config — substituted at container start)
-  │
-  │ 3. The app's bootstrap fetches the host federation entry:
-  │    GET /host/remoteEntry.json  (proxied to host:80)
-  │
-  ▼
-host:80
-  │  - returns federation manifest
-  │  - browser loads host AppShell as an ES module
-  │
-  │ 4. Host bootstrap runs:
-  │      - GET /api/remotes        (proxied to registry:3000)
-  │      - WS  /ws                 (proxied to registry:3000)
-  │
-  ▼
-registry:3000
-  │  - returns enabled remotes
-  │  - keeps WS open for live updates
-  │
-  │ 5. For each remote, gateway proxies by upstreamUrl from registry:
-  │      GET /remotes/<name>/remoteEntry.json  →  remote's upstreamUrl
-  │
-  ▼
-remote-catalog:80    remote-cart:80    ...
+## Request flow
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant G as Gateway (Rust)
+  participant H as Host (Angular/Vue/React)
+  participant R as Registry (Rust)
+  participant Rem as Remote
+
+  B->>G: GET https://shop.example.com/
+  Note over G: Resolve domain -> gate -> host
+  G->>H: Proxy / -> host upstream
+  H-->>B: index.html + JS shell
+  B->>G: GET /api/remotes
+  G->>R: Proxy /api -> registry
+  R-->>B: list of enabled remotes
+  B->>G: WS /ws (subscribe)
+  G->>R: Proxy WS -> registry
+  Note over B: Host bootstraps. For each remote:
+  B->>G: GET /remotes/checkout/remoteEntry.json
+  G->>Rem: Proxy to upstream
+  Rem-->>B: federation manifest
+  B->>Rem: Load exposed module
+  Rem-->>B: rendered component
 ```
 
-Everything that the browser sees is `localhost:8668` — the gateway hides all upstream services behind a single nginx reverse-proxy.
+The browser sees one origin per gate. Every internal service is hidden behind the gateway.
 
-The gateway nginx proxy routes are not static. At startup, gateway reads `GET /api/remotes` from the registry and generates location blocks for every enabled remote, using the remote's `upstreamUrl` field as the nginx upstream. When the registry broadcasts `remotes_changed`, gateway regenerates the routes and issues `nginx -s reload` — a graceful reload that does not drop in-flight requests.
+## The route table
 
-This means remote containers can be named anything on the Docker network. The coupling between public path (`/remotes/catalog/`) and internal service name (`http://whatever-you-called-it:80`) lives only in the remote's own environment variables, not in the gateway config.
+The gateway's route table is built from registry entities, not from a static config file. The key insight: routes are domain-scoped.
+
+```
+Request: GET shop.example.com/remotes/checkout/remoteEntry.json
+         │
+         ▼
+Gateway route table:
+  by domain "shop.example.com"
+    -> gate "storefront-prod"
+       -> host "storefront" (Angular)
+          -> public path "/"           upstream: http://host-angular:80/
+          -> public path "/remotes/checkout/*"  upstream: http://remote-checkout:80/
+          -> public path "/remotes/orders/*"    upstream: http://remote-orders:80/
+          -> public path "/api/*"      upstream: http://registry:8670/api/
+          -> public path "/ws"         upstream: ws://registry:8670/ws
+```
+
+When the registry broadcasts a change — `host_changed`, `gate_changed`, `remotes_changed` — the gateway recomputes the affected slice of the table and swaps it in atomically. Existing in-flight connections keep going; new connections see the new routes.
 
 ## Two timelines: cold start vs. live update
 
@@ -56,116 +72,141 @@ This means remote containers can be named anything on the Docker network. The co
 
 ```
 T+0  ms  browser   GET /                          gateway
-T+50 ms  browser   GET /assets/config.json        gateway
-T+100ms  browser   GET /host/remoteEntry.json     gateway → host
-T+150ms  host      GET /api/remotes               registry
-T+200ms  host      WS  /ws (subscribe)            registry
-T+250ms  host      loadRemoteModule(catalog)
-T+300ms  browser   GET /remotes/catalog/...       gateway → remote-catalog
+T+10 ms  gateway   resolve gate -> host           in-memory
+T+15 ms  browser   GET /assets/index.html         host upstream
+T+50 ms  browser   GET /remoteEntry.json          host upstream
+T+100ms  browser   GET /api/remotes               registry
+T+105ms  browser   WS /ws (subscribe)             registry
+T+150ms  browser   loadRemote(checkout)
+T+170ms  browser   GET /remotes/checkout/...      remote-checkout upstream
 ```
 
-### Live add (operator opens portal and adds a remote)
+### Live add (operator adds a remote in the portal)
 
 ```
-T+0  s   operator  POST /api/remotes              portal → registry
-T+5  ms  registry  writes registry.json
-T+5  ms  registry  broadcasts { type: "remotes_changed", remotes: [...] }
-T+10 ms  host      receives broadcast, calls loadRemoteModule()
-T+50 ms  host      router gets new route — no reload
+T+0  s   operator  POST /api/remotes              portal -> registry
+T+5  ms  registry  INSERT into store
+T+5  ms  registry  broadcast remotes_changed
+T+8  ms  gateway   receive broadcast, hot-swap route table
+T+10 ms  host      receive broadcast, register route (no reload)
+T+20 ms  user      navigates to /new-remote, sees it work
 ```
 
 No reload, no container restart, no downtime.
 
 ## Deployment topology
 
+```mermaid
+graph TB
+  subgraph "Public surface"
+    Browser
+  end
+
+  subgraph "Docker host (or k8s pod set)"
+    GW[Gateway<br/>Rust]
+    P[Portal<br/>Angular]
+
+    subgraph "Internal network only"
+      R[Registry<br/>Rust]
+      H1[Host A<br/>Angular]
+      H2[Host B<br/>Vue]
+      Rem1[Remote 1<br/>Vue]
+      Rem2[Remote 2<br/>React]
+      Rem3[Remote 3<br/>Angular]
+    end
+
+    DB[(SQLite / PostgreSQL)]
+  end
+
+  Browser -- :8668 --> GW
+  Browser -- :8669 --> P
+  GW --> R
+  GW --> H1
+  GW --> H2
+  GW --> Rem1
+  GW --> Rem2
+  GW --> Rem3
+  P --> R
+  R --> DB
 ```
-                                  ┌───────────────────┐
-                                  │ Docker host       │
-                                  │                   │
-        browser  ───── :8668 ────►│  gateway  (nginx) │
-                                  │                   │
-        operator ───── :8669 ────►│  portal   (nginx) │
-                                  │                   │
-                                  │  ┌─────────────┐  │
-                                  │  │  registry   │  │  in-network only
-                                  │  │  (Node 22)  │  │  exposed :3000
-                                  │  └─────────────┘  │
-                                  │  ┌─────────────┐  │
-                                  │  │  host       │  │  in-network only
-                                  │  │  (nginx)    │  │  expose :80
-                                  │  └─────────────┘  │
-                                  │  ┌─────────────┐  │
-                                  │  │  remote-X   │  │  in-network only
-                                  │  │  (nginx)    │  │  expose :80
-                                  │  └─────────────┘  │
-                                  └───────────────────┘
-```
 
-In production each remote is its own container, deployed by its team's CI. The `nexus` orchestrator references them by `build:` context (for dev) or `image:` reference (for prod pulls). Gateway reads each remote's `UPSTREAM_URL` from the registry and proxies to that address — the Docker service name can be anything.
+The gateway and the portal are the only services with public ports. The registry, hosts, and remotes communicate over Docker's internal network.
 
-## Why a gateway in front of host?
+## Why a gateway in front of hosts
 
-A separate gateway gives:
+1. **Stable public URL contract.** `/host/*`, `/remotes/*`, `/api/*`, `/ws` are stable. Internal service names can change at will.
+2. **One TLS termination point.** TLS happens at the gateway. Internal traffic is plain HTTP/2.
+3. **One CORS origin.** Browser code always talks to its own origin. CORS is a non-issue except for the registry (which trusts the gateway and the portal).
+4. **WebSocket proxying.** The gateway upgrades `/ws` to the registry. Browser code never sees the registry's URL.
+5. **Single point of protection.** Seven DDoS layers run in the gateway. Upstream services trust their network.
+6. **Per-gate routing.** A request for `admin.example.com` and a request for `shop.example.com` follow different paths in the same gateway process.
 
-1. **Stable public URL** — `/host/*`, `/remotes/*` and `/api/*` are stable contracts. Host and remotes can be redeployed independently without touching browser-side URL constants.
-2. **One TLS termination point** — `gateway` is the only container with a public port. Run TLS there once.
-3. **One CORS origin** — every browser request goes to the same origin. CORS becomes a non-issue.
-4. **WebSocket proxying** — `gateway/nginx.conf` upgrades `/ws` to the registry. Browser code only talks to its own origin.
-5. **Caching policy in one place** — `remoteEntry.json` and `chunk-*.js` are tagged `no-store` (because they change with every deploy); other static assets are `immutable, max-age=31536000`.
+## Why a registry
 
-## Why a registry?
+Without one, every host build would hard-code the remote list — adding a remote means rebuilding the host. The registry inverts the dependency:
 
-Without one, every host build would hard-code the remote URLs — adding a remote means rebuilding host. The registry inverts the dependency:
+- Host asks: "what remotes can I load right now?"
+- Registry answers from its database.
+- A change via portal or API fans out over WebSocket to every connected host and the gateway.
 
-- Host says: "give me the list of currently enabled remotes."
-- Registry answers from disk (`data/registry.json`).
-- A change to the registry — via Portal UI or `bnx publish` — fans out to every connected host over WebSocket.
+The registry is the only stateful component. Its database is the source of truth.
 
-The registry is the only stateful component. Its disk is the source of truth.
+## Three HTTP layers
 
-## Two HTTP layers
+There are three distinct HTTP layers in the request graph:
 
-There are two HTTP layers in the request graph. They are both built from the same building blocks but have different roles:
+1. **Gateway (Rust).** Opaque reverse proxy. Routes by domain and URL prefix. Routes are derived from the registry and hot-swapped.
+2. **Host (Angular / Vue / React).** Federation loader. Reads `/api/remotes`, loads each entry, registers routes in its own router.
+3. **Registry (Rust).** REST + WebSocket. Owns the data. Broadcasts changes.
 
-1. **gateway/nginx** — opaque reverse proxy. Routes by URL prefix. Proxy rules are generated dynamically from registry data at startup and reloaded on every `remotes_changed` broadcast — no hardcoded remote names.
-2. **host/Angular** — runtime federation loader. Reads `/api/remotes`, loads each entry, calls `provideRouter` for each route.
+An operator can change which remotes are live (registry mutation → broadcast → gateway hot-swap + host route-add) without ever touching the gateway config or restarting any service.
 
-This separation means an operator can change which remotes are live (registry change → broadcast → host re-route) without ever touching the nginx layer.
-
-## Token & correlation
-
-Two headers are added at every layer:
+## Token and correlation
 
 | Header | Set by | Read by |
 |---|---|---|
-| `X-Nexus-Token` | `nexus-runtime`'s `nexusAuthInterceptor` (and `bnx` for server-side) | registry `nexusTokenAuth` middleware |
-| `X-Request-ID` | `nexus-runtime`'s `correlationIdInterceptor` (UUID v4 per request) | registry `correlationMiddleware`, log buffer |
+| `X-Nexus-Token` | every client (CLI, host, portal, remote on startup) | registry token middleware |
+| `X-Request-ID` | every client (UUID v4 or ULID) | registry correlation middleware, log buffer |
 
-Every registry log line and error response carries the correlation id, so a failed call in the browser DevTools can be traced through the gateway, into the registry log, and out the WebSocket broadcast.
+Every registry log line and error response carries the correlation id, so a failed call in browser DevTools can be traced through the gateway, into the registry log, and out the WebSocket broadcast.
 
-## Failure modes — what happens when X dies?
+## Failure modes
 
 | Failure | Effect on user | Recovery |
 |---|---|---|
-| One remote container dies | That remote's route 502s on next navigation. Other remotes unaffected. | Restart the container — host receives no broadcast but next load works. |
-| Host container dies | Browser cannot bootstrap host shell — gateway returns 502 from `/host/...`. | Restart `host`. The browser app retries up to `environment.retryAttempts`. |
-| Registry container dies | Existing browser tabs keep working (cached remotes). New tabs see a backup file or empty list. | Restart `registry`. WebSocket auto-reconnects with exponential backoff. |
-| Gateway container dies | Total outage — there is no upstream visible to the browser. | Restart `gateway`. |
-| Disk full on registry volume | Writes start to fail with 5xx. Reads still work. | Increase volume, drain registry. |
-| Gateway nginx reload fails | Routes stay as they were before reload. | Check nginx error log: `docker compose logs gateway`. Registry still has the new remote — retry is automatic on next `remotes_changed`. |
+| One remote container dies | That remote's route returns 502 on next navigation. Other remotes unaffected. | Restart the container. Host receives no broadcast but next load works. |
+| Host container dies | Browser cannot bootstrap the host shell — gateway returns 502 from `/`. | Restart the host. Browser app retries with configured backoff. |
+| Registry container dies | Existing browser tabs keep working (cached remotes). New tabs see backup or empty list. | Restart the registry. Gateway and clients reconnect with exponential backoff. |
+| Gateway container dies | Total outage for that gateway instance — no public surface. | Restart gateway. Run multiple instances behind a load balancer for HA. |
+| Disk full on registry volume | Writes fail with 5xx. Reads still work. | Increase the volume, drain registry. |
+| Gateway hot-swap fails | Routes stay as they were before the change. Registry logs the error. | The gateway retries on the next broadcast. |
 
 The host has a three-layer fallback chain for registry reads:
 
 ```
 1. live registry over HTTP
-   └─ fail ─► 2. browser sessionStorage cache
-              └─ fail ─► 3. static file at /assets/registry-backup/remotes.json
+   └─ fail ─► 2. browser sessionStorage cache (last successful fetch)
+              └─ fail ─► 3. static backup at /assets/registry-backup.json
 ```
+
+Read [infra-high-availability](../infrastructure/infra-high-availability.md) for the multi-instance HA story.
 
 ## Reading the code
 
-- Browser routes: `nexus-gateway/src/app/services/host-loader.service.ts`.
-- Host federation bootstrap: `nexus-host-template/src/app/app.config.ts` (provider) + `@bimo-dk/nexus-runtime` `DynamicNexusService`.
-- Registry HTTP: `nexus-registry/src/index.ts`, routes in `src/routes/`.
-- Registry WS broadcast: `nexus-registry/src/websocket.ts`.
-- nginx reverse proxy: `nexus-gateway/nginx.conf`.
+- Gateway entry: `nexus-gateway/src/main.rs`.
+- Gateway route table: `nexus-gateway/src/route_table.rs`.
+- Gateway protection: `nexus-gateway/src/protection.rs`.
+- Registry entry: `nexus-registry/src/main.rs`.
+- Registry HTTP API: `nexus-registry/src/api/{remotes,hosts,gates,system}.rs`.
+- Registry WebSocket: `nexus-registry/src/ws/{hub,messages}.rs`.
+- Registry config / hot reload: `nexus-registry/src/config/`.
+- Angular runtime: `nexus-packages/packages/runtime/src/`.
+- Vue runtime: `nexus-packages/packages/runtime-vue/src/`.
+- React runtime: `nexus-packages/packages/runtime-react/src/`.
+- Framework-agnostic loader: `nexus-packages/packages/runtime-core/src/`.
+
+## Next
+
+- [Ports and URLs](ports-and-urls.md) — the public URL contract.
+- [Infra: registry](../infrastructure/infra-registry.md) — every endpoint, every message.
+- [Infra: gateway](../infrastructure/infra-gateway.md) — the seven protection layers in detail.

@@ -1,194 +1,240 @@
 ---
 id: troubleshooting
 title: Troubleshooting
-sidebar_position: 4
-description: Nexus troubleshooting guide — remote not appearing, 401 on registry calls, WebSocket not connecting, federation load failures, stale remoteEntry.json, and Docker volume issues. Symptoms, causes and fixes.
-keywords: [Nexus troubleshooting, Angular federation errors, micro frontend debug, remote not loading Angular]
+sidebar_position: 6
+description: Common Nexus problems and how to fix them. Auth, federation, WebSocket, CORS, BuildKit, gateway routing, and protection-layer false positives.
+keywords:
+  - Nexus troubleshooting
+  - micro frontend debugging
+  - federation errors
+  - common issues
 ---
 
 # Troubleshooting
 
-The 80/20 of "why isn't it working." Each entry has the symptom, the likely cause, and a check command.
+Common failure modes and their fixes. Search the page (`Ctrl/Cmd-F`) for the error string you're seeing.
 
-## Browser shows blank screen / "Host shell unavailable"
+## Authentication
 
-The gateway loaded but the host module did not.
+### `401 Unauthorized` from `/api/*`
 
-```bash
-docker compose ps host
-docker compose logs host
-curl -sI http://localhost:8668/host/remoteEntry.json
-```
-
-Causes:
-
-- `host` container is unhealthy. Restart it: `docker compose up -d --no-deps host`.
-- Gateway's `nginx.conf` does not have a `location ^~ /host/` block. Check `nexus-gateway/nginx.conf`.
-- `host` is up but `dist/host/browser/remoteEntry.json` is missing — broken build. Rebuild with `docker compose up -d --build host`.
-
-## `GET /api/remotes` returns 401
-
-Token mismatch.
+Your `X-Nexus-Token` is missing or doesn't match. Check:
 
 ```bash
-curl -i -H "X-Nexus-Token: $NEXUS_TOKEN" http://localhost:8668/api/remotes
 docker compose exec registry env | grep NEXUS_TOKEN
+# Compare to what your client is sending.
 ```
 
-The token on your client and the registry's `NEXUS_TOKEN` env-var must match. If you bake a token into the host bundle (ARG `NEXUS_TOKEN`) and a different one in `/assets/config.json`, the runtime value wins — make sure your `docker-entrypoint.d/40-runtime-config.sh` is running.
+Tokens are case-sensitive. The header name is `X-Nexus-Token`, exact spelling.
 
-## Host shows "Registry offline — showing cached data"
+### Just rotated and now `401`
 
-The host could not reach `/api/remotes` *and* `/ws`. It is showing data from `sessionStorage` cache or the static backup file.
+The grace period may have already expired. Check:
 
 ```bash
-docker compose ps registry
-docker compose logs registry | tail -20
-curl http://localhost:8668/api/.../health    # gateway → registry
+curl -H "X-Nexus-Token: $NEW_TOKEN" http://localhost:8668/api/config/token
+# { "hasActive": true, "hasPrevious": false, ... }
 ```
 
-Causes:
+If `hasPrevious` is `false`, the old token is gone — you need to use the new one everywhere. Restart any client that cached the old token.
 
-- Registry container is down or unhealthy. Restart: `docker compose up -d --no-deps registry`.
-- Gateway's `nginx.conf` `/api/` block is wrong.
-- Token mismatch — the *registry* logs will show `401`s.
+## Federation
 
-The host's WebSocket reconnects automatically with backoff. Once registry is back, the banner disappears within a minute.
+### `Cannot find module './RemoteEntry'`
 
-## Adding a remote via portal: it shows up but the route 404s
+The host received the federation manifest but the exposed module name doesn't match. Check:
 
-The registry accepted the entry but the gateway has no proxy block for `/remotes/<name>/*`.
+- The remote's `exposes` block (in `federation.config.json` for Angular, in `nexusVite({ exposes })` for Vue/React).
+- The `expose` field the host passes to `nexusRoute` / `useNexusComponent` / `<NexusComponent>`.
+
+Both must be exactly the same. Default is `RemoteEntry`.
+
+### Remote loads but renders nothing
+
+The `default` export of the exposed module is missing or wrong. The Angular adapter expects a class with `@Component`; Vue expects an SFC `<script setup>` module; React expects a function component.
+
+### `loadRemoteModule` throws `404`
+
+The gateway has no route for `/remotes/<name>/*`. Check:
 
 ```bash
-curl -sI http://localhost:8668/remotes/checkout/remoteEntry.json
-# 404 → gateway is missing the route
+bnx status
+# Is the remote enabled? Listed?
 ```
 
-Fix: extend `nexus-gateway/nginx.conf` with a `location ^~ /remotes/checkout/` block, rebuild gateway, redeploy. See [gateway docs](../services/gateway.md#adding-a-route-for-a-new-remote).
+If listed but 404: the gateway's route table didn't pick up the change. Restart the gateway, or check its log:
 
-## Federation entry returns 200 but host shows "failed remote"
-
-The entry's `exposes` block does not contain the key the host requested.
-
-```bash
-curl -s http://localhost:8668/remotes/checkout/remoteEntry.json | jq .
 ```
+docker compose logs gateway | grep -i "route_table"
+```
+
+### Stale `remoteEntry.json` after deploy
+
+The gateway's `Cache-Control` rule isn't reaching the browser. Common causes:
+
+- A CDN in front of the gateway is overriding `no-store`. Set `no-store` at the CDN too.
+- The remote's nginx config sets a long cache. Remove the override.
+
+## WebSocket
+
+### `WebSocket connection failed`
 
 Check:
 
-- `exposes` has the key your `exposedModule` field referenced (`./RemoteEntry` by default).
-- The hashed chunk files in `exposes` exist (200 on fetch).
+```bash
+curl -i -H "Connection: Upgrade" -H "Upgrade: websocket" \
+  http://localhost:8668/ws
+# Should return HTTP/1.1 426 (browser-only upgrade) or 101 (server-side test client)
+```
 
-Run `nexus-build --dry-run` in the remote to see what config was generated.
-
-## Docker build fails with `npm ERR! 401`
-
-The container can't fetch `@bimo-dk/*` from GitHub Packages.
+If `404`, the gateway isn't routing `/ws`. Confirm it's running and connected to the registry:
 
 ```bash
-echo "$NODE_AUTH_TOKEN" | docker login ghcr.io -u <user> --password-stdin
-DOCKER_BUILDKIT=1 docker build --secret id=node_auth_token,env=NODE_AUTH_TOKEN ...
+curl http://localhost:8668/health
+# Expect "registry_connected": true
 ```
 
-Common mistakes:
+### Reconnects forever, never gets `welcome`
 
-- `NODE_AUTH_TOKEN` is unset or lacks `read:packages` scope.
-- You passed the token as `--build-arg NODE_AUTH_TOKEN=...` — it doesn't reach the `RUN --mount=type=secret` block.
-- `.npmrc` references `${GITHUB_TOKEN}` instead of `${NODE_AUTH_TOKEN}`. Use the latter.
-- BuildKit not enabled — set `DOCKER_BUILDKIT=1` or use `docker buildx`.
+The token is invalid for the WS. Browser DevTools → Network → WS frame inspection should show a close with code 1008 or 4401. Update the token in the client.
 
-## `nexus-build` errors with "no @NexusRemote found"
+## CORS
 
-The decorator was not detected. Check:
+### `Access-Control-Allow-Origin missing`
 
-- The class has both `@NexusRemote()` and `@Component(...)`. Order doesn't matter.
-- The file is under `src/` (or `--src` value).
-- The import is `from '@bimo-dk/nexus-build'` exactly.
-- The class is exported (`export class` or `export default class`).
-
-Run `nexus-build scan` to see what *was* discovered.
-
-## WebSocket disconnects every 30s
-
-A proxy or load balancer between the browser and the registry is closing idle connections.
-
-```nginx
-# nexus-gateway/nginx.conf — the /ws location must have:
-proxy_read_timeout 86400;
-proxy_send_timeout 86400;
-```
-
-In production, configure your LB to keep WebSockets open at least 60s.
-
-## Two remotes have the same name → 409
+The registry's `ALLOWED_ORIGINS` doesn't include the calling origin. Update:
 
 ```bash
-# When publishing
-curl -X POST -H "X-Nexus-Token: $T" -d '...' http://.../api/remotes
-# 409 conflict { message: "Remote \"checkout\" already exists" }
-```
-
-Either:
-
-- `DELETE /api/remotes/checkout` then re-POST.
-- `PUT /api/remotes/checkout` with partial fields (most fields can be updated except `name`).
-
-If you're using `bnx publish`, it currently POSTs; if you re-publish, expect 409. The `SelfRegisterService` in `@bimo-dk/nexus-runtime` already handles this by trying PUT-then-POST.
-
-## Registry data disappeared after restart
-
-The volume is not mounted.
-
-```yaml
-# docker-compose.yml — registry block must have:
-volumes:
-  - registry-data:/app/data
-```
-
-Without it, `data/registry.json` lives only inside the container's writable layer, which is reset on every `docker compose up --build`.
-
-To recover, you can re-register every remote via portal or CLI. Or, if you have a backup, restore it:
-
-```bash
-docker cp ./registry.json.bak nexus-registry:/app/data/registry.json
+# .env
+ALLOWED_ORIGINS=https://shop.example.com,https://admin.example.com
 docker compose restart registry
 ```
 
-## "Out of sync" — portal shows remote X but the route doesn't work
+Wildcards aren't supported — list each origin.
 
-This is rare and indicates the host did not receive the broadcast. Two checks:
+### Browser sees `Access-Control-Allow-Origin: *` but still gets blocked
 
-1. **Is the host's WS connected?** Look at the portal's dashboard → connected clients. If `0`, the host's WS died.
-2. **Is the host's `RegistryWebSocketService` connected?** Open the host in DevTools → Network → WS. You should see `/ws` with frames flowing.
+Either you're sending credentials (then `*` isn't allowed — use the explicit origin) or you have a stale CORS preflight cached. Open DevTools → Network → check the OPTIONS request, then disable cache and retry.
 
-Reload the browser tab — the host re-bootstraps and re-pulls `/api/remotes`. If that fixes it, the WS broadcast path needs investigation.
+## BuildKit / npm
 
-## "I changed nginx.conf but it has no effect"
+### `Could not resolve "@bimo-dk/nexus-runtime"` during Docker build
 
-You changed it in the repo, but the running container is using the baked copy.
+The BuildKit secret didn't reach the build stage. Common causes:
 
-```bash
-docker compose up -d --build --no-deps gateway
-```
+- Forgot `--secret id=npmrc,src=$HOME/.npmrc` on `docker build`.
+- The `RUN` line is missing `--mount=type=secret,id=npmrc,target=/root/.npmrc`.
+- The `.npmrc` doesn't have the GitHub Packages line.
 
-`nginx.conf` is `COPY`'d at image build time. Editing the file on the host doesn't change the container — you must rebuild.
-
-## When in doubt
+Verify locally:
 
 ```bash
-# All service status
-docker compose ps
+cat ~/.npmrc
+# Should include:
+# @bimo-dk:registry=https://npm.pkg.github.com
+# //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 
-# Last 50 log lines from every service
-docker compose logs --tail=50
-
-# Just the registry
-docker compose logs -f registry
-
-# Internal docker network connectivity
-docker compose exec gateway wget -qO- http://registry:3000/health
-docker compose exec gateway wget -qO- http://host:80/health
-docker compose exec gateway wget -qO- http://remote-catalog:80/health
+echo $NODE_AUTH_TOKEN | head -c 8
+# Should print eight chars of your PAT.
 ```
 
-If `wget` from inside the gateway works but the browser doesn't, the issue is gateway's `nginx.conf` or the browser cache.
+### `npm error code E401` from GitHub Packages
+
+Your PAT doesn't have `read:packages` scope, or it's expired. Regenerate at github.com → Settings → Developer settings → Personal access tokens.
+
+## Gateway routing
+
+### `Bad Gateway 502`
+
+The upstream isn't reachable. Check:
+
+- The container is running (`docker compose ps`).
+- The container's port matches the `UPSTREAM_URL` registered with the registry.
+- The Docker network is the same for both gateway and upstream.
+
+### Routes for a new gate don't work
+
+The gateway runs per-instance with one gate selected. If you added a gate after the gateway started, restart the gateway, or set `NEXUS_GATE_NAME` explicitly so the new gate is picked.
+
+## Protection layer false positives
+
+### Legitimate user got banned
+
+In the portal → Protection page → find them in **Active bans** → click **Unban**. Then raise `banThresholdViolations` — your threshold is too tight for your traffic.
+
+### Healthchecks getting rate-limited
+
+The gateway has no built-in whitelist today. Either:
+
+- Route healthchecks through a different gate that bypasses the rate limit.
+- Send them from a known IP and accept the violations (they're below ban threshold under normal cadence).
+
+### Real users hitting `payload_too_large`
+
+`maxBodyBytes` defaults to 1 MiB. Raise it for endpoints that accept uploads.
+
+## CLI
+
+### `bnx publish` fails with `ECONNREFUSED`
+
+`REGISTRY_URL` doesn't resolve. Check:
+
+```bash
+echo $REGISTRY_URL
+curl -s $REGISTRY_URL/health
+```
+
+If you're running outside Docker, use `http://localhost:8668` (through the gateway) or `http://localhost:8670` (registry direct, dev compose only).
+
+### `bnx dev` reports remotes as "not running"
+
+The autostart didn't pick them up. Check that:
+
+- `nexus.config.json#dev.remotes.<name>.path` is correct.
+- `npm start` in that path works manually.
+- The `port` matches what the dev script binds to.
+
+### `bnx status` shows `framework: unknown`
+
+The host record is missing the `framework` field. This happens with hosts created before multi-framework support. Update via:
+
+```bash
+curl -X PUT http://localhost:8668/api/hosts/$HOST_ID \
+  -H "X-Nexus-Token: $NEXUS_TOKEN" \
+  -d '{ "framework": "angular" }'
+```
+
+## Performance
+
+### Slow first page load
+
+Pre-load remotes you know the user will need:
+
+```ts
+// Angular
+provideNexusHost({ preload: ['catalog', 'orders'] })
+```
+
+The federation runtime fetches and resolves them in parallel, so the first navigation is instant.
+
+### Registry RAM climbing
+
+The log buffer holds `LOG_BUFFER_CAPACITY` entries (default 500). If you bumped it for debugging, lower it again.
+
+The WebSocket broadcast channel has a fixed capacity (256 messages). It should not grow unbounded. If it does, file a bug.
+
+## When all else fails
+
+Look at the correlation id. Every error response carries one (`correlationId` field). Search the registry logs:
+
+```bash
+docker compose logs registry | grep <correlation-id>
+```
+
+You'll see every log line for that request — middleware decisions, validation, store calls, broadcast emission. That's usually enough to identify the root cause.
+
+## Next
+
+- [Reference: security](security.md)
+- [Infra: protection](../infrastructure/infra-protection.md)
+- [Workflows: zero-downtime](../workflows/zero-downtime.md)

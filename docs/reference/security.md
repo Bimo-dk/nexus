@@ -1,144 +1,178 @@
 ---
 id: security
 title: Security
-sidebar_position: 2
-description: Nexus security model — X-Nexus-Token shared secret, CORS allowlist, BuildKit secret mounts for NODE_AUTH_TOKEN, security headers from nginx, and token passthrough in the dev proxy. What is protected and what is not.
-keywords: [micro frontend security, Angular federation security, X-Nexus-Token, BuildKit secrets Docker]
+sidebar_position: 5
+description: The Nexus security model. Token model, rotation, CORS, BuildKit secrets for GitHub Packages, gateway protection, and what's out of scope today.
+keywords:
+  - Nexus security
+  - micro frontend security
+  - token rotation
+  - BuildKit secrets
+  - CORS
 ---
 
 # Security
 
-The Bimo-Nexus security model is small on purpose. Three concerns:
+This page is the platform-level security reference. For protection layer operations, see [infra-protection](../infrastructure/infra-protection.md).
 
-1. Who can read/write the registry (`X-Nexus-Token`).
-2. Where browser code can be embedded (security headers).
-3. How `@bimo-dk/*` packages are pulled into builds (GitHub Packages auth).
+## Token model
 
-## `X-Nexus-Token`
-
-Every registry endpoint requires the header `X-Nexus-Token: <NEXUS_TOKEN>`. The only exception is `GET /health` — a liveness probe.
-
-```http
-GET /api/remotes HTTP/1.1
-Host: nexus.example.com
-X-Nexus-Token: 7c8e...e2a
-```
-
-Missing or wrong → `401 { error: "unauthorized" }`.
-
-### Where the token lives
-
-| Component | How it gets the token |
-|---|---|
-| Registry | `NEXUS_TOKEN` env-var |
-| Host (Angular) | Built into the bundled `nexusAuthInterceptor`, overridable via `/assets/config.json#nexusToken` |
-| Portal (Angular) | Same as host |
-| Gateway | Read by Angular bundle for proxied calls; nginx itself does **not** check the token |
-| `bnx` CLI | `NEXUS_TOKEN` env-var |
-| `RegistryClient` (any Node tool) | Constructor option `token` |
-
-The Angular bundle's interceptor only adds the header for requests matching the registry origin — calls to unrelated origins are not tagged.
+Today's model is **single shared secret**: `NEXUS_TOKEN` is required for every `/api/*` call. Anyone with the token can mutate every host, gate, remote, and configuration setting. Treat it like a database password.
 
 ### Rotation
 
-The token is shared state. To rotate:
+Rotate with a grace period so existing clients don't fail mid-call:
 
-1. Pick the new token.
-2. Update `.env` (NEXUS_TOKEN) on the host running the orchestrator.
-3. `docker compose up -d --build` — every service that bakes the token rebuilds; runtime overrides via `/assets/config.json` are also re-substituted.
-4. Update any external tooling (`bnx`'s `NEXUS_TOKEN`, CI secrets).
-
-For zero-downtime rotation, the registry accepts a `NEXUS_TOKEN_NEXT` (planned, not yet implemented) — both are accepted during a transition window.
-
-### What the token does *not* protect
-
-- It is symmetric. Anyone with the token can do anything to the registry.
-- It is not bound to an identity — no audit trail beyond log lines.
-- It is not encrypted in transit unless you put TLS in front of the gateway. **Always run TLS in production.**
-
-For finer-grained access control, put the gateway behind an SSO proxy that maps the user identity to the right token (or to a "viewer" token vs. a "writer" token in a future version).
-
-## Security headers
-
-Every nginx container sets:
-
-```nginx
-add_header X-Frame-Options          "SAMEORIGIN"                       always;
-add_header X-Content-Type-Options   "nosniff"                          always;
-add_header X-XSS-Protection         "1; mode=block"                    always;
-add_header Referrer-Policy          "strict-origin-when-cross-origin"  always;
+```bash
+curl -X POST http://localhost:8668/api/config/token/rotate \
+  -H "X-Nexus-Token: $NEXUS_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{ "newToken": "<new-long-random>", "gracePeriodSeconds": 600 }'
 ```
 
-`X-Frame-Options: SAMEORIGIN` blocks the app from being iframed cross-origin. If you have a legitimate use case for embedding, replace with a `Content-Security-Policy: frame-ancestors` clause.
+For 10 minutes, both tokens authenticate. After that the old token is rejected.
+
+If a token leaks and you need to revoke immediately:
+
+```bash
+# Rotate to a new token with grace period 0, then revoke the previous
+curl -X POST .../api/config/token/rotate -d '{"newToken":"...","gracePeriodSeconds":0}'
+curl -X DELETE .../api/config/token/previous
+```
+
+### Hashing
+
+Tokens are stored as HMAC-SHA256 hashes with a `NEXUS_TOKEN_PEPPER`. Set the pepper in production; without it the registry uses a default and warns on every start.
+
+### What's on the roadmap
+
+Per-identity tokens with role-based scopes (`read:remotes`, `write:hosts`, …). Not shipped today.
 
 ## CORS
 
-The registry allows only origins in `ALLOWED_ORIGINS` (comma-separated). In dev, the orchestrator's `.env.example` lists `http://localhost:866{6,7,8,9}` and `:8671`.
-
-For production, set it to your public host(s):
+The registry's `ALLOWED_ORIGINS` env var is the allowlist. Comma-separated, or `*` to allow any origin.
 
 ```ini
-ALLOWED_ORIGINS=https://app.example.com,https://admin.example.com
+ALLOWED_ORIGINS=https://shop.example.com,https://admin.example.com
 ```
 
-Wildcard (`*`) is allowed but disables credentialed requests in browsers — fine for read-only public APIs, not for the registry.
+Wildcards (`*.example.com`) are not supported — list each origin explicitly. The OPTIONS preflight is handled automatically.
+
+For the gateway, set `corsOrigins` in the gateway config (via portal or API). Same semantics.
 
 ## GitHub Packages auth
 
-`@bimo-dk/*` packages are not on the public npm registry. They live on GitHub Packages at `https://npm.pkg.github.com`. Every consuming repo needs:
-
-### `.npmrc`
+`@bimo-dk/nexus-*` packages live on GitHub Packages. Auth via `.npmrc`:
 
 ```ini
 @bimo-dk:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 ```
 
-Commit this file. It does not contain a secret — only the variable name.
+Set `NODE_AUTH_TOKEN` to a GitHub PAT with `read:packages` scope (only).
 
-### `NODE_AUTH_TOKEN` env var
+### Why `NODE_AUTH_TOKEN`, not `GITHUB_TOKEN`
 
-On your dev machine: a PAT (classic or fine-grained) with `read:packages` scope.
+npm interpolates `${NODE_AUTH_TOKEN}` from the environment. `GITHUB_TOKEN` is the GitHub Actions automatic token, which doesn't have `read:packages` by default and has different lifecycle semantics. Keep them separate.
 
-In CI: a repository secret named `NODE_AUTH_TOKEN`.
+### Docker BuildKit secret pattern
 
-In Docker builds: a **BuildKit secret**, never a `--build-arg`:
+**Never pass the token via `ARG`.** Build-args persist in image layer metadata and are visible to anyone who pulls the image.
+
+Use BuildKit `--mount=type=secret`:
 
 ```dockerfile
-# syntax=docker/dockerfile:1.7
-RUN --mount=type=secret,id=node_auth_token,required=true \
-    NODE_AUTH_TOKEN=$(cat /run/secrets/node_auth_token) \
-    npm install --legacy-peer-deps
+# syntax=docker/dockerfile:1.6
+FROM ghcr.io/bimo-dk/nexus-base:latest AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci --prefer-offline
 ```
 
-And on the build command:
+Build with the secret mounted from a file:
 
 ```bash
-DOCKER_BUILDKIT=1 docker build \
-  --secret id=node_auth_token,env=NODE_AUTH_TOKEN \
-  -t myorg/checkout:latest .
+docker build --secret id=npmrc,src=$HOME/.npmrc -t my-image .
 ```
 
-:::danger Never use `ARG NODE_AUTH_TOKEN`
-ARG values are persisted in image layer metadata. Anyone with image pull rights can read them with `docker history`. BuildKit secrets are not persisted — they exist only inside the `RUN` step.
-:::
+Or in compose:
 
-## Threat model summary
+```yaml
+services:
+  remote:
+    build:
+      context: .
+      secrets: [npmrc]
 
-| Threat | Mitigation |
-|---|---|
-| Anonymous reader hits `/api/remotes` | 401 — token required |
-| MITM on registry traffic | Run TLS at the LB / gateway |
-| Attacker iframes the portal to phish admin actions | `X-Frame-Options: SAMEORIGIN` |
-| Cross-origin XHR to registry from a malicious site | CORS allowlist |
-| GitHub PAT leaks via image layer | BuildKit secret, never ARG |
-| Token reuse | Rotate via `NEXUS_TOKEN` env + rebuild |
-| Malicious remote registered via stolen token | The token is the trust boundary — protect it; audit log lines correlate by `X-Request-ID` |
+secrets:
+  npmrc:
+    file: ~/.npmrc
+```
 
-## What's not in scope (yet)
+The `.npmrc` exists only during the `RUN` step. It is not part of any image layer. It cannot leak.
 
-- Per-user identity / multi-tenant tokens
-- Signed remote manifests (every host trusts every registered remote URL)
-- Rate limiting on the registry API
+## Gateway protection
 
-These are planned. Until they ship, treat `NEXUS_TOKEN` like a database password — anyone with it has full write.
+Seven layers, all configurable:
+
+- IP bans (manual + automatic)
+- Per-IP HTTP connection caps
+- Token bucket rate limiting
+- Payload size limits
+- Header size limits
+- Read timeouts (including Slowloris)
+- Per-IP WebSocket connection caps
+
+Configure via portal → Protection page or `/api/config/gateway/protection`. Operations playbook: [infra-protection](../infrastructure/infra-protection.md).
+
+## TLS
+
+The gateway speaks HTTP/1.1 and HTTP/2 in plaintext internally. Terminate TLS at your load balancer or CDN. The gateway listens on `:8668` and expects to be fronted.
+
+If you must terminate TLS at the gateway, run it behind a small TLS terminator (e.g., Caddy, Traefik, AWS NLB-with-TLS). Native TLS in axum is supported but not the recommended deployment shape.
+
+## CSP, HSTS, frame headers
+
+Set these via the gateway's `customHeaders`:
+
+```bash
+curl -X PUT .../api/config/gateway \
+  -d '{
+    "customHeaders": [
+      { "name": "Strict-Transport-Security", "value": "max-age=31536000; includeSubDomains" },
+      { "name": "X-Content-Type-Options",     "value": "nosniff" },
+      { "name": "X-Frame-Options",            "value": "DENY" },
+      { "name": "Content-Security-Policy",    "value": "default-src https://shop.example.com; ..." }
+    ]
+  }'
+```
+
+Per-gate overrides are supported — see [workflows: multi-domain-setup](../workflows/multi-domain-setup.md).
+
+## Secrets in env files
+
+Don't check `.env` into git. The repo's `.gitignore` already excludes it. For CI, use the platform's secret store (GitHub Actions secrets, GitLab CI variables, k8s `Secret`s).
+
+## Data at rest
+
+The registry's SQLite file contains:
+
+- Host, gate, remote configuration.
+- Hashed token (not the raw secret).
+- The pepper if you wrote it to disk somewhere (don't).
+
+Encrypt the volume at rest if your threat model requires it. PostgreSQL deployments should use transparent data encryption per your provider.
+
+## Reading the code
+
+- Token middleware: `nexus-registry/src/features/token.rs`.
+- Token hashing: same file.
+- CORS layer: `nexus-registry/src/main.rs` (`build_cors`).
+- Gateway protection: `nexus-gateway/src/protection.rs`.
+- BuildKit pattern: every `Dockerfile` in the workspace.
+
+## Next
+
+- [Workflows: protection-setup](../workflows/protection-setup.md)
+- [Reference: configuration](configuration.md) — token rotation, metrics auth, etc.
+- [Infra: protection](../infrastructure/infra-protection.md) — playbook.

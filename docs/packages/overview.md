@@ -2,92 +2,98 @@
 id: overview
 title: Packages overview
 sidebar_position: 1
-description: Overview of all seven @bimo-dk/nexus npm packages — core types, client services, build tooling, Angular runtime providers, UI components, testing utilities, and the bnx CLI. Published to GitHub Packages.
-keywords: [bimo-dk nexus packages, Angular micro frontend npm packages, nexus-runtime Angular, nexus-build Angular]
+description: The ten @bimo-dk/nexus-* packages. What each one is for, what depends on what, and how they fit together for Angular, Vue, and React applications.
+keywords:
+  - nexus packages
+  - bimo-dk packages
+  - micro frontend SDK
+  - Angular SDK
+  - Vue SDK
+  - React SDK
 ---
 
-# Packages
+# Packages overview
 
-Seven npm packages published from the [`nexus-packages`](https://github.com/Bimo-dk/nexus-packages) monorepo. They are all scoped `@bimo-dk/*`, all written in TypeScript, all built with `turbo`, and all versioned with Changesets.
+Nexus ships ten npm packages under the `@bimo-dk/nexus-*` namespace. They live in the `nexus-packages` monorepo and are published to GitHub Packages (`npm.pkg.github.com`).
 
-## What's in each
+## The dependency graph
 
-| Package | Purpose |
+```mermaid
+graph BT
+  core[nexus-core<br/>types + validators]
+  client[nexus-client<br/>HTTP + WS client]
+  runtimeCore[nexus-runtime-core<br/>framework-agnostic loader]
+  runtime[nexus-runtime<br/>Angular adapter]
+  runtimeVue[nexus-runtime-vue<br/>Vue adapter]
+  runtimeReact[nexus-runtime-react<br/>React adapter]
+  build[nexus-build<br/>decorators + Vite plugin + CLI]
+  cli[nexus-cli — bnx]
+  testing[nexus-testing<br/>mock server + factories]
+  ui[nexus-ui<br/>shared Angular components]
+
+  client --> core
+  runtimeCore --> client
+  runtime --> runtimeCore
+  runtimeVue --> runtimeCore
+  runtimeReact --> runtimeCore
+  build --> core
+  cli --> client
+  cli --> build
+  testing --> core
+  ui --> client
+```
+
+`core` has no runtime dependencies. Everything else builds on top of it. Each framework adapter wraps `runtime-core` with framework-idiomatic ergonomics; they all use the same underlying federation primitives.
+
+## What you install
+
+| If you're building | You need |
 |---|---|
-| [`@bimo-dk/nexus-core`](nexus-core.md) | TypeScript types + constants + validators. Zero runtime deps. |
-| [`@bimo-dk/nexus-client`](nexus-client.md) | `RegistryClient` (HTTP) + `RegistryWebSocket` (WS). |
-| [`@bimo-dk/nexus-build`](nexus-build.md) | `@NexusRemote` + `@NexusComponent` decorators + `nexus-build` CLI — generates `federation.config.json` and `catalog.json`. |
-| [`@bimo-dk/nexus-runtime`](nexus-runtime.md) | Angular providers — `provideNexusHost`, `provideNexusRemote` — plus `<nexus-component>` tag, `nexusRoute()`, `ComponentLoaderService`, `CatalogService`. |
-| [`@bimo-dk/nexus-ui`](nexus-ui.md) | Angular Material component library — health badge, offline banner, status card. |
-| [`@bimo-dk/nexus-testing`](nexus-testing.md) | `MockRegistryServer` + mock factories. devDependency only. |
-| [`@bimo-dk/nexus-cli`](nexus-cli.md) | `bnx` CLI — generate, publish, status, health, dev. |
+| An Angular remote | `@bimo-dk/nexus-runtime` and `@bimo-dk/nexus-build` |
+| A Vue remote | `@bimo-dk/nexus-runtime-vue` and `@bimo-dk/nexus-build` (for `nexusVite`) |
+| A React remote | `@bimo-dk/nexus-runtime-react` and `@bimo-dk/nexus-build` (for `nexusVite`) |
+| An Angular host | `@bimo-dk/nexus-runtime` and `@bimo-dk/nexus-client` |
+| A Vue host | `@bimo-dk/nexus-runtime-vue` and `@bimo-dk/nexus-client` |
+| A React host | `@bimo-dk/nexus-runtime-react` and `@bimo-dk/nexus-client` |
+| A Node script that touches the registry | `@bimo-dk/nexus-client` |
+| Tests | `@bimo-dk/nexus-testing` (devDependency only) |
 
-## Dependency graph
+`core` is a transitive dependency of every adapter; you don't install it directly.
 
-```
-core ◄────────────────┐
-  ▲                   │
-  ├─── client ◄───────┤
-  ├─── ui ◄───────────┤    (no client dep)
-  ├─── build ◄────────┤    (no runtime dep)
-  ├─── runtime ◄──────┤    (depends on client + build)
-  ├─── testing ◄──────┤    (depends on core + client)
-  └─── cli ◄──────────┤    (depends on core + client + build)
-```
+## Packages
 
-`core` is the root. Everything else depends on it directly or transitively.
-
-## Which package do I need?
-
-| Role | Install |
+| Package | What it is |
 |---|---|
-| Writing a remote | `@bimo-dk/nexus-build` (dev), `@bimo-dk/nexus-runtime` (deps), `@bimo-dk/nexus-core` (peer) |
-| Writing a host | `@bimo-dk/nexus-runtime`, `@bimo-dk/nexus-ui` |
-| Writing a registry client (Node or browser) | `@bimo-dk/nexus-client` |
-| Writing tests | `@bimo-dk/nexus-testing` |
-| Operating the platform from the terminal | `@bimo-dk/nexus-cli` (global) |
-| Sharing types across services | `@bimo-dk/nexus-core` |
+| [`@bimo-dk/nexus-core`](nexus-core.md) | Types, constants, validators. Zero runtime dependencies. |
+| [`@bimo-dk/nexus-client`](nexus-client.md) | HTTP + WebSocket client for the registry. Works in Node and the browser. |
+| [`@bimo-dk/nexus-runtime-core`](nexus-runtime-core.md) | Framework-agnostic loader, self-registration, fallback chain, reconnect. |
+| [`@bimo-dk/nexus-runtime`](nexus-runtime.md) | Angular adapter — `provideNexusHost`, `provideNexusRemote`, `nexusRoute`, `<nexus-component>`. |
+| [`@bimo-dk/nexus-runtime-vue`](nexus-runtime-vue.md) | Vue 3 adapter — `createNexusPlugin`, `useNexusRemote`, `<NexusComponent>`, `nexusRoute`. |
+| [`@bimo-dk/nexus-runtime-react`](nexus-runtime-react.md) | React 18 adapter — `NexusProvider`, `useNexusComponent`, `<NexusComponent>`, `createNexusRoute`. |
+| [`@bimo-dk/nexus-build`](nexus-build.md) | `@NexusRemote` + `@NexusComponent` decorators (Angular), `nexusVite` plugin (Vue/React), `nexus-build` CLI. |
+| [`@bimo-dk/nexus-cli`](nexus-cli.md) | `bnx` — generate, publish, status, health, dev, hosts, gates. |
+| [`@bimo-dk/nexus-testing`](nexus-testing.md) | Mock factories, `MockRegistryServer`, `createMockRegistryClient`. |
+| [`@bimo-dk/nexus-ui`](nexus-ui.md) | Shared Angular component library used by the portal and host templates. |
 
-`nexus-runtime` already pulls `nexus-client` and `nexus-build` transitively, so for the Angular case you typically install:
+## Versioning
 
-```bash
-npm install @bimo-dk/nexus-runtime
-npm install -D @bimo-dk/nexus-build
-```
+All packages follow semver. The repo uses [Changesets](https://github.com/changesets/changesets) to coordinate releases. Major-version bumps are coordinated across packages (e.g., upgrading Angular forces a major bump of `nexus-runtime` and `nexus-ui` together).
 
-## Authentication for GitHub Packages
+## GitHub Packages auth
 
-`@bimo-dk/*` are hosted on **GitHub Packages**, not the public npm registry. Each consuming repo needs `.npmrc`:
+Install with a `.npmrc` that points the `@bimo-dk` scope at GitHub Packages:
 
 ```ini
 @bimo-dk:registry=https://npm.pkg.github.com
 //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
 ```
 
-And the env-var `NODE_AUTH_TOKEN` (not `GITHUB_TOKEN`) set to a PAT with `read:packages` scope.
+Set `NODE_AUTH_TOKEN` to a GitHub PAT with `read:packages` scope. See [reference: security](../reference/security.md) for the BuildKit-secret pattern that keeps the PAT out of image layers.
 
-In Dockerfiles, use BuildKit secrets to avoid leaking the token into image layers:
+## Next
 
-```dockerfile
-# syntax=docker/dockerfile:1.7
-RUN --mount=type=secret,id=node_auth_token,required=true \
-    NODE_AUTH_TOKEN=$(cat /run/secrets/node_auth_token) \
-    npm install --legacy-peer-deps
-```
-
-See [security](../reference/security.md#github-packages-auth) for the full setup.
-
-## Release flow
-
-```
-1. Change one or more packages
-2. npm run changeset          # interactive: pick packages, bump, write summary
-3. git commit + push
-4. PR → main triggers publish.yml:
-     - changeset version  → bumps + writes CHANGELOG
-     - turbo build + test
-     - changeset publish  → npm
-     - github release created
-```
-
-`verify/` in `nexus-packages` runs after publish to smoke-test that the published tarballs actually work — a guardrail in case a build script silently dropped a file.
+- Pick the runtime that matches your framework:
+  - [Angular](nexus-runtime.md)
+  - [Vue](nexus-runtime-vue.md)
+  - [React](nexus-runtime-react.md)
+- [CLI: bnx](nexus-cli.md)

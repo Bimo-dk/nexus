@@ -1,234 +1,142 @@
 ---
 id: component-catalog
 title: Component catalog
-sidebar_position: 6
-description: Expose and consume Angular components across micro frontend boundaries using the Nexus component catalog. Share UI elements between remotes with NexusComponent — no rebuild, no redeploy of the consuming remote.
-keywords: [Angular cross-remote components, micro frontend component sharing, NexusComponent Angular, Angular federation component catalog]
+sidebar_position: 10
+description: Publish, discover, and use cross-team components with the Nexus catalog. NexusComponent decorator for Angular, catalog field on nexusVite for Vue and React.
+keywords:
+  - micro frontend catalog
+  - component federation
+  - NexusComponent decorator
+  - cross-team components
 ---
 
 # Component catalog
 
-The catalog is Nexus's answer to **"what components do the other teams expose, and how do I use them?"** — without standing up a separate Storybook deployment or wiring up a shared design-system repo.
+The catalog is the discoverable inventory of what every remote exposes. It populates automatically — no central registry to update, no Storybook deployment to maintain. Components show up the moment a remote container starts.
 
-You tag a component with `@NexusComponent({...})`. At build time the metadata is collected into `catalog.json` and published next to `remoteEntry.json`. The portal's `/catalog` page aggregates every registered remote's `catalog.json` into a searchable index.
+## How it gets populated
 
-```
-src/                                  build           served at
-├── orders/                            │                │
-│   ├── order-table.component.ts ──────┤                │
-│   │   @NexusComponent({...})         │                │
-│   ├── order-detail.component.ts ─────┤                │
-│   │   @NexusComponent({...})         │                │
-└── ...                                ▼                ▼
-                              public/catalog.json  /remotes/orders/catalog.json
-                                                        │
-                                                        ▼
-                                               portal /catalog page
-                                               ┌──────────────────────┐
-                                               │ search, filter,      │
-                                               │ by category, tag,    │
-                                               │ remote, inputs spec  │
-                                               └──────────────────────┘
-```
-
----
-
-## Annotate a component
+### Angular
 
 ```ts
-import { Component } from '@angular/core';
-import { NexusRemote, NexusComponent } from '@bimo-dk/nexus-build';
+import { NexusComponent } from '@bimo-dk/nexus-build';
 
-@NexusRemote({ exposeAs: 'OrderTable' })
 @NexusComponent({
   title: 'Order Table',
-  description: 'Paginated table of orders with status filter',
+  description: 'Sortable, paginated table of orders.',
   category: 'data-display',
-  tags: ['orders', 'commerce', 'table'],
-  icon: 'shopping_cart',
+  tags: ['orders', 'commerce'],
   inputs: {
-    filter:   { type: 'string',  default: 'all',    description: 'Status filter', enum: ['all', 'open', 'closed'] },
-    pageSize: { type: 'number',  default: 25,       description: 'Rows per page' },
-    readonly: { type: 'boolean', default: false },
+    filter: { type: 'string', default: 'pending' },
+    pageSize: { type: 'number', default: 25 },
   },
 })
 @Component({ /* ... */ })
 export default class OrderTableComponent {}
 ```
 
-`@NexusRemote()` and `@NexusComponent()` stack — they serve different purposes:
+`nexus-build` reads this decorator at build time and writes `catalog.json` next to `remoteEntry.json`. The portal's `/catalog` page aggregates all such files from all registered remotes.
 
-| Decorator | Produces | Read by |
-|---|---|---|
-| `@NexusRemote()` | `federation.config.json` entry under `exposes` | Native Federation at build time |
-| `@NexusComponent({...})` | `catalog.json` entry | Portal `/catalog`, `CatalogService`, IDEs |
-
-You can use either independently. Most catalog entries also need to be federated, so stacking both is the common case.
-
----
-
-## Options
+### Vue / React
 
 ```ts
-interface NexusComponentOptions {
-  title: string;                                   // required — display name
-  description?: string;                            // shown under the title
-  category?: string;                               // free-form, used for grouping
-  tags?: string[];                                 // free-form, used for filter/search
-  icon?: string;                                   // Material icon name or single emoji
-  inputs?: Record<string, NexusInputSpec>;         // @Input() schema
-  experimental?: boolean;                          // hidden from default catalog view
-}
-
-type NexusInputType = 'string' | 'number' | 'boolean' | 'object' | 'array';
-
-interface NexusInputSpec {
-  type: NexusInputType;
-  default?: unknown;
-  description?: string;
-  required?: boolean;
-  enum?: string[];          // for string inputs
-}
-```
-
-The conventional `category` set is `data-display | input | navigation | layout | feedback | chart` — but it is free-form. Pick what fits your domain.
-
----
-
-## How `catalog.json` is generated
-
-`nexus-build` (the `prebuild` step in every remote) scans `src/**/*.ts` for both decorators on the same class. Output:
-
-```jsonc
-// public/catalog.json — written alongside federation.config.json
-{
-  "remote": "orders",
-  "generatedAt": "2026-06-03T10:15:00.000Z",
-  "entries": [
+nexusVite({
+  name: 'orders',
+  exposes: { OrderTable: './src/order-table.vue' },
+  catalog: [
     {
-      "expose": "OrderTable",
-      "className": "OrderTableComponent",
-      "title": "Order Table",
-      "description": "Paginated table of orders with status filter",
-      "category": "data-display",
-      "tags": ["orders", "commerce", "table"],
-      "icon": "shopping_cart",
-      "inputs": {
-        "filter":   { "type": "string",  "default": "all", "enum": ["all","open","closed"] },
-        "pageSize": { "type": "number",  "default": 25 },
-        "readonly": { "type": "boolean", "default": false }
+      expose: 'OrderTable',
+      title: 'Order Table',
+      description: 'Sortable, paginated table of orders.',
+      category: 'data-display',
+      tags: ['orders', 'commerce'],
+      inputs: {
+        filter: { type: 'string', default: 'pending' },
+        pageSize: { type: 'number', default: 25 },
       },
-      "experimental": false
-    }
-  ]
-}
-```
-
-The file lives in `public/` so the remote's nginx serves it from `/catalog.json`. The gateway routes `/remotes/<name>/catalog.json` to the right remote.
-
-Override the path with `nexus-build --catalog-path dist/catalog.json` if your build copies `public/` differently.
-
----
-
-## The portal catalog page
-
-Open http://localhost:8669/catalog. You see one card per discovered entry, with:
-
-- Icon + title + remote/expose path
-- Tags + category pills
-- `experimental` warning if set
-- Input schema in a collapsible details table — types, defaults, descriptions, required marker
-
-Filters:
-
-- **Search** — title, tags, expose, description
-- **Category** — populated from every entry's `category`
-- **Remote** — only show one remote's entries
-- **Tag** — populated from every entry's `tags`
-
-Refresh button re-fetches every `catalog.json`. Errors (one remote down, malformed JSON) are reported per-remote so the rest of the catalog keeps working.
-
----
-
-## Reading the catalog programmatically
-
-In any host or remote, inject `CatalogService`:
-
-```ts
-import { CatalogService } from '@bimo-dk/nexus-runtime';
-
-@Component({ /* ... */ })
-export class MyComponentPicker {
-  readonly catalog = inject(CatalogService);
-
-  async ngOnInit() {
-    await this.catalog.refresh();
-    const tables = this.catalog.filter({ category: 'data-display', tag: 'table' });
-    console.log(tables);
-  }
-}
-```
-
-`CatalogService` exposes signals:
-
-```ts
-catalog.entries()     // signal<CatalogEntry[]>
-catalog.loading()     // signal<boolean>
-catalog.errors()      // signal<Map<remoteName, errorMessage>>
-catalog.categories()  // computed<string[]>  (unique, sorted)
-catalog.tags()        // computed<string[]>  (unique, sorted)
-
-catalog.filter({ query, category, tag, remote })  // CatalogEntry[]
-```
-
-Use this for in-app component pickers, admin tooling, or to wire a dashboard that lets a user drop catalog entries into a layout.
-
----
-
-## End-to-end: catalog → drop into your app
-
-```ts
-// 1. Tag the component in the remote
-@NexusRemote({ exposeAs: 'PriceChart' })
-@NexusComponent({
-  title: 'Price chart',
-  category: 'chart',
-  tags: ['finance', 'chart'],
-  inputs: { ticker: { type: 'string', required: true } },
+    },
+  ],
 })
-@Component({ /* ... */ })
-export default class PriceChartComponent { ... }
-
-// 2. Build + deploy — federation.config.json AND catalog.json are written
-// 3. Register the remote (auto via provideNexusRemote, or manual)
-// 4. In any consuming app:
 ```
+
+The `nexusVite` plugin writes `catalog.json` at `closeBundle()`.
+
+## How it's discovered
+
+The portal's Catalog page fetches `catalog.json` from every enabled remote. Each entry shows:
+
+- Title, description, category, tags.
+- Source remote and exposed module.
+- Input schema (types, required, defaults).
+- A copy-to-clipboard snippet for the consumer framework you pick.
+
+Click "Copy as Angular":
 
 ```html
-<nexus-component remote="finance" expose="PriceChart" [inputs]="{ ticker: 'BIMO' }" />
+<nexus-component remote="orders" expose="OrderTable" [inputs]="{ filter: 'pending', pageSize: 25 }" />
 ```
 
-That's the whole loop. The chart is fetched once, cached, and renders inside the host. See [loading patterns](loading-patterns.md) for the other ways to mount it.
+Click "Copy as Vue":
 
----
+```vue
+<NexusComponent remote="orders" expose="OrderTable" :inputs="{ filter: 'pending', pageSize: 25 }" />
+```
 
-## Discoverability across teams
+Click "Copy as React":
 
-The biggest payoff is social, not technical:
+```tsx
+<NexusComponent remote="orders" expose="OrderTable" props={{ filter: 'pending', pageSize: 25 }} />
+```
 
-- A PM browses `/catalog` and finds a `CartSummary` she did not know existed.
-- A new hire reads `/catalog` instead of asking five team leads what is reusable.
-- A `tags: ['design-system']` filter shows everything an org has agreed is canonical.
-- An `experimental: true` flag lets teams ship work-in-progress components without polluting the default view.
+## How it's used programmatically
 
-The catalog is the closest thing in Nexus to a design system — without forcing one onto teams that do not want it.
+```ts
+import { inject } from '@angular/core';
+import { CatalogService } from '@bimo-dk/nexus-runtime';
 
----
+const catalog = inject(CatalogService);
 
-## Related
+const all = await catalog.list();
+const dataDisplays = await catalog.list({ category: 'data-display' });
+const orderEntries = await catalog.list({ tag: 'orders' });
+```
 
-- [`@NexusComponent` reference](../packages/nexus-build.md#nexuscomponent--catalog-metadata)
-- [`<nexus-component>` tag](../packages/nexus-runtime.md#nexus-component--drop-in-federated-tag)
-- [`nexusRoute()` helper](../packages/nexus-runtime.md#nexusroute--lazy-route-from-a-remote)
-- [`CatalogService`](../packages/nexus-runtime.md#catalogservice)
-- [Loading patterns](loading-patterns.md) — three ways to consume catalog entries.
+Vue / React equivalents read the catalog through the same client — `RegistryClient.getCatalog()`.
+
+## Input shape conventions
+
+| Field | Use |
+|---|---|
+| `type` | `string` / `number` / `boolean` / `object` / `array` |
+| `description` | Single-line description for the catalog UI. |
+| `default` | Default value used when the consumer omits the input. |
+| `required` | If true, the catalog UI flags missing inputs. |
+
+The catalog is metadata; the actual props pass straight through to your component at runtime. The framework adapter does not validate input shapes — your component should defensively handle missing or wrong-typed inputs.
+
+## Cross-framework catalog
+
+A Vue catalog entry can be consumed from an Angular host, and vice versa. The catalog is purely descriptive; the actual mount path goes through the framework adapter and produces a native component on the consumer side.
+
+That said: passing complex objects (functions, observables, Promises) across the framework boundary is fragile. Stick to plain serializable inputs.
+
+## Curation
+
+Use categories and tags consistently across your remotes. A reasonable taxonomy:
+
+| Category | Examples |
+|---|---|
+| `data-display` | tables, lists, cards |
+| `data-input` | forms, pickers, editors |
+| `navigation` | breadcrumbs, sidebars |
+| `feedback` | toasts, modals, banners |
+| `commerce` | cart, checkout, product |
+| `auth` | login, profile, role guards |
+
+Tags should be the *thing the component is about* (`orders`, `users`, `payment`), not its type (`table`, `form`).
+
+## Next
+
+- [Workflows: loading-patterns](loading-patterns.md) — how to actually use a discovered component.
+- [Packages: nexus-runtime](../packages/nexus-runtime.md) — `CatalogService` (Angular).
+- [Infra: portal](../infrastructure/infra-portal.md) — the Catalog page.

@@ -1,74 +1,70 @@
 ---
 id: base-image
-title: Base Image
+title: nexus-base-image
 sidebar_position: 7
-description: The Nexus base Docker image — Alpine-based layer with Node 22, nginx, wget and curl pre-installed. Cuts 30s off cold-cache builds for every service. Two stages — builder and runtime — shared across the entire platform.
-keywords: [Docker base image micro frontend, Node 22 Alpine Docker, micro frontend Docker layer, nginx Alpine base image]
+description: The shared Docker base layer used by every Nexus service. Pinned Node, npm, and tool versions. Cache-friendly for fast rebuilds.
+keywords:
+  - micro frontend docker
+  - shared base image
+  - nexus-base-image
 ---
 
-# Base Image
+# nexus-base-image
 
-Repo: [`nexus-base-image`](https://github.com/Bimo-dk/nexus-base-image) — Image: `ghcr.io/bimo-dk/nexus-base`
+The `nexus-base-image` repository ships a single Docker image used as the build stage for every Nexus service that needs Node.js. It exists for two reasons:
 
-A small Alpine-based Docker image that every Bimo-Nexus service uses as its starting point. Pre-installs Node.js 22, nginx, `wget`, `curl`, `bash` and `git` so each downstream Dockerfile saves ~30s on `apk add` calls.
+- **Pin tool versions in one place.** Node, npm, build essentials.
+- **Make CI fast.** Every service's Docker build reuses the base layer, so `npm ci` is the only download per build.
 
-## Build & publish
+Published image: `ghcr.io/bimo-dk/nexus-base:latest` (also versioned `:1.0`, `:1.0.0`).
+
+## What's in it
+
+```dockerfile
+FROM node:22-bookworm-slim
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates git wget \
+ && rm -rf /var/lib/apt/lists/*
+
+RUN npm install -g npm@10
+
+WORKDIR /app
+```
+
+That's it. The point is *reproducibility*: every service depends on the same Node 22 patch level, the same npm 10 patch level, and the same OS package set.
+
+## How services use it
+
+Every Nexus service (host template, remote templates, portal) starts its Dockerfile with:
+
+```dockerfile
+# syntax=docker/dockerfile:1.6
+FROM ghcr.io/bimo-dk/nexus-base:latest AS build
+WORKDIR /app
+COPY package.json package-lock.json* ./
+RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci --prefer-offline
+COPY . .
+RUN npm run build
+
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+```
+
+The runtime stage is service-specific (nginx for SPAs, distroless for Rust). The build stage is always `nexus-base`.
+
+## Build
 
 ```bash
 cd nexus-base-image
-docker build -t bimo-nexus-base:22-alpine .
-docker tag bimo-nexus-base:22-alpine ghcr.io/bimo-dk/nexus-base:22-alpine
-docker push ghcr.io/bimo-dk/nexus-base:22-alpine
+docker build -t ghcr.io/bimo-dk/nexus-base:dev .
 ```
 
-CI in this repo does the push automatically on a tagged commit.
+## Updating Node
 
-## Two stages
+Bump the `FROM node:22-bookworm-slim` line, build, publish a new tag, then re-build downstream services pointing at the new tag. Use a versioned tag (`:1.1`) rather than `:latest` in production for reproducibility.
 
-The Dockerfile is multi-stage and each Bimo-Nexus service picks the stage it needs:
+## Next
 
-| Stage | Includes | Used by |
-|---|---|---|
-| `bimo-nexus-builder` | `node:22-alpine`, `git`, `wget`, `curl`, `bash` | The builder stage of every service |
-| `bimo-nexus-runtime` | `nginx:alpine`, `wget`, `curl` + default `HEALTHCHECK /health` | The runtime stage of Angular services (gateway, host, portal, remotes) |
-
-`bimo-nexus-runtime` ships a default `HEALTHCHECK` that hits `/health` every 30s — every service overrides `nginx.conf` to actually answer that endpoint.
-
-## Usage in a service Dockerfile
-
-```dockerfile
-# syntax=docker/dockerfile:1.7
-FROM ghcr.io/bimo-dk/nexus-base:22-alpine AS bimo-nexus-builder AS builder
-WORKDIR /app
-COPY package*.json .npmrc ./
-RUN --mount=type=secret,id=node_auth_token,required=true \
-    NODE_AUTH_TOKEN=$(cat /run/secrets/node_auth_token) \
-    npm install --legacy-peer-deps
-COPY . .
-RUN npm run build:prod
-
-FROM ghcr.io/bimo-dk/nexus-base:22-alpine AS bimo-nexus-runtime
-COPY --from=builder /app/dist/<service>/browser /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
-```
-
-The `AS bimo-nexus-builder AS builder` syntax is valid Dockerfile — it pulls the stage `bimo-nexus-builder` from the base image and renames it `builder` locally. Same trick for runtime.
-
-## When to bump the base image
-
-- Major Node version (22 → 24)
-- Switching nginx to a non-`alpine` base
-- Adding a globally-needed tool (e.g. `jq`)
-
-Anything more local (per-service deps) belongs in the service's own Dockerfile.
-
-## Why a base image at all?
-
-Without it every service Dockerfile re-runs the same `apk add wget curl bash` and `node:22-alpine` pull. With it:
-
-- Builds are ~30s faster on cold cache.
-- The OS layer is identical across services — security scans only need to flag one image.
-- A single `HEALTHCHECK` policy is enforced.
-
-The downside: if you bump the base, every downstream service must rebuild to see the change. The repo is versioned with the underlying Node tag (e.g. `22-alpine`, `24-alpine`) so a bump is opt-in per consumer.
+- [Workflows: deployment](../workflows/deployment.md) — building and shipping a service image.
+- [Reference: security](../reference/security.md) — why BuildKit secrets matter when this image installs npm packages.

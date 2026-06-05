@@ -1,50 +1,233 @@
 /**
- * Bimo-Nexus theme — built on Docusaurus's Infima.
- * Primary palette: indigo (matches the host shell brand).
+ * Nexus theme. Compact developer-oriented aesthetic inspired by Datadog and Grafana.
+ * Built on Docusaurus's Infima.
  */
 
 :root {
-  --ifm-color-primary: #6366f1;
-  --ifm-color-primary-dark: #4f51ed;
-  --ifm-color-primary-darker: #4346ec;
-  --ifm-color-primary-darkest: #2e30c9;
-  --ifm-color-primary-light: #7779f1;
-  --ifm-color-primary-lighter: #8385f3;
-  --ifm-color-primary-lightest: #a9aaf7;
-  --ifm-code-font-size: 90%;
-  --ifm-font-family-base: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --ifm-heading-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
-    'Helvetica Neue', Arial, sans-serif;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
+  --nexus-accent: #3b82f6;
+  --nexus-accent-strong: #2563eb;
+  --nexus-accent-soft: rgba(59, 130, 246, 0.12);
+  --nexus-accent-border: rgba(59, 130, 246, 0.28);
+
+  --nexus-bg-light: #ffffff;
+  --nexus-surface-light: #f8fafc;
+  --nexus-text-light: #0f172a;
+  --nexus-text-muted-light: #475569;
+  --nexus-border-light: #e2e8f0;
+
+  --ifm-color-primary: var(--nexus-accent);
+  --ifm-color-primary-dark: #2c74e6;
+  --ifm-color-primary-darker: #266ee0;
+  --ifm-color-primary-darkest: #1e57b6;
+  --ifm-color-primary-light: #56a0ff;
+  --ifm-color-primary-lighter: #69aaff;
+  --ifm-color-primary-lightest: #a0c8ff;
+
+  --ifm-code-font-size: 92%;
+  --ifm-font-family-base:
+    'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ifm-font-family-monospace:
+    'JetBrains Mono', 'Fira Code', SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace;
+  --ifm-heading-font-family: var(--ifm-font-family-base);
+  --ifm-heading-font-weight: 650;
+  --ifm-h1-font-size: 2.25rem;
+  --ifm-h2-font-size: 1.6rem;
+  --ifm-h3-font-size: 1.25rem;
+  --ifm-leading-desktop: 1.6;
+  --ifm-spacing-horizontal: 1.25rem;
+
+  --docusaurus-highlighted-code-line-bg: rgba(59, 130, 246, 0.16);
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #818cf8;
-  --ifm-color-primary-dark: #6477f6;
-  --ifm-color-primary-darker: #556bf5;
-  --ifm-color-primary-darkest: #2a45f1;
-  --ifm-color-primary-light: #9ea1fa;
-  --ifm-color-primary-lighter: #adadfb;
-  --ifm-color-primary-lightest: #d4d4fd;
-  --ifm-background-color: #0f172a;
-  --ifm-background-surface-color: #1e293b;
-  --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
+  --nexus-bg-dark: #0b1220;
+  --nexus-surface-dark: #111b2c;
+  --nexus-surface-dark-2: #16223a;
+  --nexus-text-dark: #e2e8f0;
+  --nexus-text-muted-dark: #94a3b8;
+  --nexus-border-dark: #1f2a3d;
+
+  --ifm-color-primary: #60a5fa;
+  --ifm-color-primary-dark: #438ff8;
+  --ifm-color-primary-darker: #3585f7;
+  --ifm-color-primary-darkest: #126af3;
+  --ifm-color-primary-light: #7db8fc;
+  --ifm-color-primary-lighter: #8bc1fc;
+  --ifm-color-primary-lightest: #b8d8fd;
+
+  --ifm-background-color: var(--nexus-bg-dark);
+  --ifm-background-surface-color: var(--nexus-surface-dark);
+  --ifm-navbar-background-color: rgba(11, 18, 32, 0.85);
+  --ifm-footer-background-color: #060a13;
+  --ifm-toc-border-color: var(--nexus-border-dark);
+
+  --docusaurus-highlighted-code-line-bg: rgba(96, 165, 250, 0.22);
+}
+
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.navbar {
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--ifm-toc-border-color, var(--nexus-border-light));
+}
+
+[data-theme='dark'] .navbar {
+  border-bottom-color: var(--nexus-border-dark);
 }
 
 .markdown table {
   display: table;
   width: 100%;
+  font-size: 0.92rem;
+}
+
+.markdown th,
+.markdown td {
+  vertical-align: top;
 }
 
 .markdown code {
-  background: rgba(99, 102, 241, 0.08);
-  border: 1px solid rgba(99, 102, 241, 0.15);
+  background: var(--nexus-accent-soft);
+  border: 1px solid var(--nexus-accent-border);
   padding: 0.1rem 0.35rem;
   border-radius: 4px;
+  font-size: 0.9em;
 }
 
 [data-theme='dark'] .markdown code {
-  background: rgba(129, 140, 248, 0.12);
-  border-color: rgba(129, 140, 248, 0.25);
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.28);
+}
+
+.markdown h2 {
+  margin-top: 2.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--ifm-toc-border-color, var(--nexus-border-light));
+}
+
+[data-theme='dark'] .markdown h2 {
+  border-top-color: var(--nexus-border-dark);
+}
+
+.markdown h3 {
+  margin-top: 1.75rem;
+}
+
+.theme-doc-sidebar-menu {
+  font-size: 0.92rem;
+}
+
+.menu__link {
+  border-radius: 6px;
+}
+
+.menu__link--active:not(.menu__link--sublist) {
+  background: var(--nexus-accent-soft);
+  color: var(--ifm-color-primary);
+}
+
+.theme-code-block {
+  border-radius: 8px;
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.04);
+}
+
+[data-theme='dark'] .theme-code-block {
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.nexus-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.nexus-card {
+  border: 1px solid var(--ifm-toc-border-color, var(--nexus-border-light));
+  border-radius: 10px;
+  padding: 1rem 1.1rem;
+  background: var(--ifm-background-surface-color, var(--nexus-surface-light));
+  transition: border-color 120ms ease, transform 120ms ease;
+}
+
+.nexus-card:hover {
+  border-color: var(--nexus-accent);
+  transform: translateY(-1px);
+}
+
+.nexus-card h3 {
+  margin: 0 0 0.4rem 0;
+  font-size: 1.05rem;
+}
+
+.nexus-card p {
+  margin: 0;
+  color: var(--ifm-color-emphasis-700);
+  font-size: 0.92rem;
+}
+
+.nexus-hero {
+  padding: 2.5rem 0 1.5rem;
+  border-bottom: 1px solid var(--ifm-toc-border-color, var(--nexus-border-light));
+  margin-bottom: 2rem;
+}
+
+[data-theme='dark'] .nexus-hero {
+  border-bottom-color: var(--nexus-border-dark);
+}
+
+.nexus-hero h1 {
+  font-size: 2.5rem;
+  line-height: 1.15;
+  margin-bottom: 0.75rem;
+}
+
+.nexus-hero p.lead {
+  font-size: 1.1rem;
+  color: var(--ifm-color-emphasis-700);
+  max-width: 56ch;
+}
+
+.nexus-pill {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--nexus-accent-soft);
+  color: var(--ifm-color-primary);
+  border: 1px solid var(--nexus-accent-border);
+}
+
+.nexus-stat {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.nexus-stat .stat {
+  border: 1px solid var(--ifm-toc-border-color, var(--nexus-border-light));
+  border-radius: 10px;
+  padding: 1rem;
+  background: var(--ifm-background-surface-color, var(--nexus-surface-light));
+}
+
+.nexus-stat .stat .num {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--ifm-color-primary);
+  font-family: var(--ifm-font-family-monospace);
+}
+
+.nexus-stat .stat .label {
+  font-size: 0.85rem;
+  color: var(--ifm-color-emphasis-700);
+  margin-top: 0.25rem;
 }

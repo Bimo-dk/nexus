@@ -2,8 +2,13 @@
 id: installation
 title: Installation
 sidebar_position: 3
-description: Install and run the Nexus Angular micro frontend platform. Prerequisites, environment variables, docker compose up, smoke test, and adding your first remote — running in under 5 minutes.
-keywords: [Angular micro frontend install, Nexus installation, docker compose Angular, micro frontend setup guide]
+description: Install and run the Nexus micro frontend platform. Prerequisites, environment variables, docker compose up, smoke test, and adding your first remote.
+keywords:
+  - micro frontend install
+  - Nexus installation
+  - docker compose micro frontend
+  - micro frontend setup
+  - Angular Vue React micro frontend setup
 ---
 
 # Installation
@@ -12,18 +17,18 @@ keywords: [Angular micro frontend install, Nexus installation, docker compose An
 
 | Tool | Version | Purpose |
 |---|---|---|
-| Node.js | ≥ 22 | All packages and services |
-| npm | ≥ 10 | Workspace tooling |
-| Docker | ≥ 24 (with BuildKit) | Compose orchestration + `--mount=type=secret` |
+| Docker | ≥ 24 with BuildKit | Compose orchestration + `--mount=type=secret` |
 | docker compose | v2 | The `compose` plugin syntax |
-| GitHub PAT | scope `read:packages` | To pull `@bimo-dk/nexus-*` from GitHub Packages |
+| Node.js | ≥ 22 | Only for the CLI and the packages workspace |
+| npm | ≥ 10 | Workspace tooling |
+| GitHub PAT | scope `read:packages` | Pull `@bimo-dk/nexus-*` packages |
 
 Verify your toolchain:
 
 ```bash
-node --version          # v22.x.x
-docker --version        # 24+
-docker compose version  # v2.x
+docker --version           # 24+
+docker compose version     # v2.x
+node --version             # v22+
 ```
 
 ## 1. Clone the orchestrator
@@ -33,19 +38,25 @@ git clone https://github.com/Bimo-dk/nexus.git
 cd nexus
 ```
 
-This repo only contains the `docker-compose.yml` and developer scripts; the implementation lives in the sibling `nexus-*` repos. Clone them next to each other so the compose `build.context: ../nexus-<svc>` paths resolve:
+This repo contains the `docker-compose.yml`, the docs site, and developer scripts. The service implementations live in sibling repos. Clone them next to each other so the compose `build.context: ../nexus-<svc>` paths resolve:
 
 ```
 parent-folder/
-├── nexus/                  # you are here
+├── nexus/                       # you are here
 ├── nexus-gateway/
-├── nexus-host-template/
-├── nexus-portal/
 ├── nexus-registry/
-├── nexus-remote-templat/
-├── nexus-example/          # optional — runnable demo
-└── nexus-packages/         # optional — package source
+├── nexus-portal/
+├── nexus-host-template/         # Angular host scaffold
+├── nexus-host-template-vue/     # Vue host scaffold
+├── nexus-remote-templat/        # Angular remote scaffold
+├── nexus-remote-templat-vue/    # Vue remote scaffold
+├── nexus-remote-templat-react/  # React remote scaffold
+├── nexus-base-image/
+├── nexus-packages/              # optional — package source
+└── nexus-example/               # optional — runnable demo
 ```
+
+If you only want to run the platform (not develop on it), the gateway, registry, portal, and base-image repos are enough — the rest are templates.
 
 ## 2. Configure environment
 
@@ -56,13 +67,13 @@ cp .env.example .env
 Edit `.env`:
 
 ```ini
-# Strong shared secret — every service must agree on this
+# Long random string. Every service must agree on this token.
 NEXUS_TOKEN=replace-with-a-long-random-string
 
-# CORS allowlist for the registry (browser origins only)
+# Browser origins the registry CORS layer trusts. Comma-separated.
 ALLOWED_ORIGINS=http://localhost:8668,http://localhost:8669
 
-# GitHub Packages auth — needed for any Docker image that installs @bimo-dk/*
+# GitHub Packages auth. Needed by any image that installs @bimo-dk/* packages.
 NODE_AUTH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
@@ -71,7 +82,7 @@ Use `NODE_AUTH_TOKEN`, not `GITHUB_TOKEN`. The `.npmrc` in each service expects 
 :::
 
 :::warning Never put the token in an `ARG`
-The Dockerfiles use BuildKit `--mount=type=secret` for `NODE_AUTH_TOKEN`. Tokens passed via `--build-arg` are persisted in image layer metadata and visible to anyone who inspects the image. Compose injects it as a secret automatically — do not change the Dockerfile to use ARG.
+The Dockerfiles use BuildKit `--mount=type=secret` for `NODE_AUTH_TOKEN`. Tokens passed via `--build-arg` are persisted in image-layer metadata and visible to anyone who inspects the image. Compose injects the token as a secret automatically — do not change the Dockerfile to use `ARG`.
 :::
 
 ## 3. Start the stack
@@ -90,26 +101,27 @@ When everything is healthy:
 
 - **Application** — http://localhost:8668
 - **Admin portal** — http://localhost:8669
-- **Registry health** — http://localhost:3000/health (only reachable in `docker-compose.dev.yml`)
 
 ## 4. Smoke-test
 
 ```bash
-# Public health (no token)
+# Public health (no token).
 curl http://localhost:8668/health
-# {"status":"ok","service":"app"}
+# { "status": "ok", "service": "nexus-gateway" }
 
-# Registry health (no token)
-curl http://localhost:8668/api/../health  # goes through gateway -> registry
+# Registry health through the gateway (no token).
+curl http://localhost:8668/api/health
 
-# Registry remotes (token required)
+# Registry remotes (token required).
 curl -H "X-Nexus-Token: $NEXUS_TOKEN" http://localhost:8668/api/remotes
-# {"remotes":[],"total":0,"enabled":0}
+# { "remotes": [], "total": 0, "enabled": 0 }
 ```
 
-If the last request returns `401`, the token in `.env` does not match what the registry container loaded — re-check `NEXUS_TOKEN` and `docker compose up --build` to rebuild.
+If the last request returns `401`, the token in `.env` does not match what the registry container loaded. Re-check `NEXUS_TOKEN` and rebuild.
 
 ## 5. Add your first remote
+
+Two options:
 
 ### Automatic (recommended)
 
@@ -117,35 +129,59 @@ Deploy a remote container with these environment variables set:
 
 ```yaml
 environment:
-  REGISTRY_INTERNAL_URL: http://registry:3000
+  REGISTRY_INTERNAL_URL: http://registry:8670
   NEXUS_TOKEN: ${NEXUS_TOKEN}
   PUBLIC_URL: /remotes/checkout/remoteEntry.json
   UPSTREAM_URL: http://checkout:80
 ```
 
-When the container starts, `provideNexusRemote()` POSTs the remote to the registry. The registry broadcasts `remotes_changed`. The host adds the route. Gateway adds the proxy. The remote is live at `http://localhost:8668/checkout` within seconds — with no config changes anywhere else.
+When the container starts, the framework adapter POSTs the remote to the registry. The registry broadcasts `remotes_changed`. The host adds the route. The gateway adds the proxy. The remote is live at `http://localhost:8668/checkout` within seconds — with no config changes anywhere else.
 
 ### Manual (via portal)
 
-Open http://localhost:8669 → **Remotes → Add remote**, and fill in `name`, `url`, `upstreamUrl`, `exposedModule` and `routePath`. The host receives a WebSocket broadcast and registers the route within seconds.
+Open http://localhost:8669, navigate to **Remotes → Add remote**, and fill in `name`, `url`, `upstreamUrl`, `exposedModule`, and `routePath`. The host receives a WebSocket broadcast and registers the route within seconds.
+
+## Install the CLI
+
+```bash
+# npm
+npm install -g @bimo-dk/nexus-cli
+
+# pnpm
+pnpm add -g @bimo-dk/nexus-cli
+
+# yarn
+yarn global add @bimo-dk/nexus-cli
+```
+
+```bash
+bnx --version
+bnx status   # shows hosts, gates, remotes
+```
+
+The CLI authenticates against the registry via `NEXUS_TOKEN` and `REGISTRY_URL` (read from `.env` in the current directory).
 
 ## Common environment variables
 
-| Variable | Where it is read | Default |
+| Variable | Read by | Default |
 |---|---|---|
-| `NEXUS_TOKEN` | registry, host, portal, gateway (build) | `change-this-to-a-strong-secret-in-production` |
+| `NEXUS_TOKEN` | registry, host, portal, remotes | none — required |
 | `ALLOWED_ORIGINS` | registry CORS | `*` |
-| `NODE_AUTH_TOKEN` | host, portal, registry build (BuildKit secret) | — |
-| `HOST_REMOTE_ENTRY` | gateway runtime | `/host/remoteEntry.json` |
-| `HOST_EXPOSED_MODULE` | gateway runtime | `./AppShell` |
-| `PORT` | registry | `3000` |
+| `NODE_AUTH_TOKEN` | Docker build (BuildKit secret) | none — required to install packages |
+| `PORT` | registry | `8670` |
+| `BIND_ADDRESS` | registry | `0.0.0.0` |
+| `DATABASE_URL` | registry | `sqlite:./data/registry.db` |
 | `HEALTH_CHECK_INTERVAL_MS` | registry | `30000` |
 | `LOG_BUFFER_CAPACITY` | registry | `500` |
+| `NEXUS_TOKEN_PEPPER` | registry | none — set in production |
+| `REGISTRY_URL` | gateway, CLI | `http://registry:8670` |
+| `LOG_JSON` | gateway | `false` |
 
 A complete table is in [reference/environment](../reference/environment.md).
 
 ## Next
 
-- [Architecture](architecture.md) — how the pieces talk.
-- [Developer workflows](../workflows/dev-mode.md) — hot reload one remote against staging.
-- [Portal walkthrough](../services/portal.md) — what the admin app exposes.
+- [Quick start: Angular remote](quick-start-angular.md)
+- [Quick start: Vue remote](quick-start-vue.md)
+- [Quick start: React remote](quick-start-react.md)
+- [Architecture deep dive](architecture.md)

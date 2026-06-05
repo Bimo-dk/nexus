@@ -5,10 +5,10 @@ services:
     build: ./registry
     container_name: nexus-registry-dev
     ports:
-      - "3000:3000"
+      - "8670:8670"
     environment:
       NODE_ENV: development
-      PORT: 3000
+      PORT: 8670
       NEXUS_TOKEN: dev-token-change-in-production
       ALLOWED_ORIGINS: http://localhost:8666,http://localhost:8667,http://localhost:8668,http://localhost:8669,http://localhost:8671
     volumes:
