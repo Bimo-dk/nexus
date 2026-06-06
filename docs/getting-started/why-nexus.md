@@ -45,7 +45,7 @@ That is what Nexus *removes*. What it *adds* is one mental model — gates, host
 Honest tradeoffs:
 
 - **You buy into the three frameworks Nexus supports today.** Angular 19, Vue 3, React 18. If your stack is Svelte or Solid, you'd need to write an adapter against `@bimo-dk/nexus-runtime-core` first. (The runtime-core surface is small — under 500 lines.)
-- **The registry is the source of truth.** Lose the registry's database file and you lose your host/gate/remote configuration. Back it up. SQLite is the default; a PostgreSQL migration path is on the roadmap for HA — see [infra-high-availability](../infrastructure/infra-high-availability.md).
+- **The registry is the source of truth.** Lose the registry's database and you lose your host/gate/remote configuration. Back it up. The registry runs on SQLite (default), Postgres, MySQL or MariaDB — see [infra-high-availability](../infrastructure/infra-high-availability.md) for the HA story.
 - **The token model is currently symmetric.** Anyone with `NEXUS_TOKEN` can mutate the registry. A per-identity model is on the roadmap; for now, treat the token like a database password and rotate it via the portal.
 
 ## When Nexus is not the right answer

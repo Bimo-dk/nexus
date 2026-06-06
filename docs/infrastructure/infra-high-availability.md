@@ -2,7 +2,7 @@
 id: infra-high-availability
 title: High availability
 sidebar_position: 6
-description: Run Nexus with no single point of failure. SQLite today, PostgreSQL migration path with LISTEN/NOTIFY, multi-instance registry, gateway restart resilience.
+description: Run Nexus with no single point of failure. SQLite, Postgres, MySQL or MariaDB backed registry, multi-instance registry on Postgres, gateway restart resilience.
 keywords:
   - high availability frontend
   - micro frontend HA
@@ -17,28 +17,31 @@ This page is honest about what HA looks like in Nexus today and what is on the r
 
 ## What's shipped today
 
-- **SQLite-backed registry.** Single writer, fast reads, durable on a persisted volume. Suitable for a single-region deployment that can tolerate ~30 seconds of read-only fallback while the registry restarts.
+- **Multi-engine registry storage.** One binary, four storage backends — SQLite, Postgres, MySQL, MariaDB. The engine is chosen at startup from the connection URL; the schema is identical and created on first boot. See [infra-registry](infra-registry.md#storage) for the URL syntax.
+- **SQLite for single-node deployments.** Single writer, fast reads, durable on a persisted volume. Suitable for a single-region deployment that can tolerate ~30 seconds of read-only fallback while the registry restarts.
+- **Postgres / MySQL / MariaDB for HA.** Run the database on a managed cluster or your own replicated server; the registry container stays stateless. Multiple registry replicas can already share one database for HTTP traffic — the only piece pending is broadcast fan-out across replicas (see "What's on the migration path" below).
 - **Stateless gateway.** Multiple gateway instances behind a load balancer is supported and tested. Each gateway maintains its own WebSocket subscription to the registry and its own protection state. Bans are per-instance.
 - **Host fallback chain.** Browser-side: live registry → `sessionStorage` cache → static backup JSON. Open browser tabs survive a registry restart with no visible impact.
 - **Graceful shutdown.** The registry broadcasts `registry_shutting_down` with a `resume_in_ms` hint before draining HTTP. Clients are expected to back off for that interval.
 
+## Migrating from SQLite to Postgres / MySQL / MariaDB
+
+The registry shares one schema and one query layer (sqlx's `Any` driver) across every engine. Switching is a configuration change:
+
+1. Stand up a Postgres / MySQL / MariaDB instance and create an empty database for the registry.
+2. Export current SQLite contents — either dump the JSON view via the API (`GET /api/hosts`, `/api/gates`, `/api/remotes`, `/api/config`) and replay it as `POST`/`PUT` against the new registry, or use `sqlite3 registry.db .dump` and run a manual translation.
+3. Restart the registry with `DATABASE_URL=postgres://...` (or the matching `DB_*` split vars).
+4. The schema is created on first boot. Hosts re-register themselves on their next container restart.
+
+The portal, gateway, and remotes do not need to change.
+
 ## What's on the migration path
-
-### PostgreSQL backend
-
-The registry's storage trait is `Db`-shaped (see `nexus-registry/src/store/mod.rs`). The SQLite implementation is the only concrete adapter shipped today. A PostgreSQL adapter is the next storage backend — same schema, same migrations, same query layer.
-
-To preview the migration:
-
-1. Run a PostgreSQL instance with the new schema applied.
-2. Export current SQLite contents with `sqlite3 registry.db .dump` and import with `psql`.
-3. Set `DATABASE_URL=postgres://...` on the registry.
-
-The portal and gateway do not need to change.
 
 ### Multi-instance registry with LISTEN/NOTIFY
 
-Once on PostgreSQL, you can run several registry instances against the same database. The plan:
+Once you're on Postgres, you can already point multiple registry replicas at the same database for HTTP traffic. The piece pending is broadcast fan-out: changes committed on instance A do not yet reach WebSocket subscribers on instance B until a `LISTEN/NOTIFY` bridge lands.
+
+The plan:
 
 - Each registry instance subscribes to a PostgreSQL channel (`LISTEN nexus_changes`).
 - A `PUT /api/remotes/foo` on instance A commits the change and issues `NOTIFY nexus_changes 'remotes:foo'`.
@@ -93,9 +96,14 @@ A logged-in user with an open tab survives a 30-minute registry outage without n
 
 ## Disaster recovery
 
-### Lose the registry volume
+### Lose the registry's storage
 
-The registry's SQLite file is the source of truth. Back it up. Restore by stopping the registry, replacing the file, and restarting. Hosts will re-register themselves on their next container restart; gates and hosts come back from the restored file.
+Whichever engine you chose owns the source of truth. Back it up:
+
+- **SQLite**: snapshot the file (`/app/data/registry.db`) on a cadence that matches your RPO.
+- **Postgres / MySQL / MariaDB**: rely on the database's own backup / WAL / binlog setup — the same one your operations team already runs.
+
+Restore by stopping the registry, restoring the storage, and starting the registry again. Hosts re-register themselves on their next container restart; gates and hosts come back from the restored database.
 
 Daily snapshots are sufficient for most teams.
 
@@ -105,7 +113,7 @@ Replace the container. The new instance bootstraps from the registry in under a 
 
 ### Lose the entire stack
 
-The registry, the gateway, and the portal are stateless or backed by a single file. A redeploy from your registry's image tags brings everything back. The only state to recover is the registry's SQLite file.
+The registry, the gateway, and the portal are stateless or backed by a single database. A redeploy from your registry's image tags brings everything back. The only state to recover is the registry's storage — the SQLite file or the dump from your Postgres / MySQL / MariaDB.
 
 ## Testing your HA story
 
@@ -123,13 +131,14 @@ See [packages: nexus-testing](../packages/nexus-testing.md).
 | Item | Status |
 |---|---|
 | SQLite backend | shipped |
+| Postgres backend | shipped |
+| MySQL / MariaDB backend | shipped |
 | Multi-instance gateway behind LB | shipped |
 | Browser fallback chain (3 layers) | shipped |
 | Graceful shutdown coordination | shipped |
-| PostgreSQL backend | in design |
 | Multi-instance registry via LISTEN/NOTIFY | in design |
-| Region-replicated PostgreSQL | future |
-| Built-in leader election (Raft) | not planned (PostgreSQL provides ordering) |
+| Region-replicated Postgres | future |
+| Built-in leader election (Raft) | not planned (Postgres provides ordering) |
 
 Track progress in the GitHub repo's milestones.
 

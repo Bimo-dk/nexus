@@ -240,7 +240,7 @@ graph TB
   Gateway -->|REST + WS| Registry
   Host -->|REST + WS| Registry
   Portal -->|REST + WS| Registry
-  Registry --> DB[(SQLite / PostgreSQL)]
+  Registry --> DB[(SQLite / Postgres / MySQL / MariaDB)]
 
   classDef rust fill:#cf6a32,stroke:#7a3d1a,color:#fff
   classDef ui fill:#1d4ed8,stroke:#1e40af,color:#fff
@@ -290,7 +290,7 @@ graph TB
   </div>
   <div className="nexus-card">
     <h3>High availability</h3>
-    <p>SQLite today. PostgreSQL with LISTEN/NOTIFY for multi-instance registry on the migration path.</p>
+    <p>Single binary, four storage engines: SQLite, Postgres, MySQL, MariaDB. Multi-instance registry on Postgres for HA without code change.</p>
   </div>
   <div className="nexus-card">
     <h3>Zero-downtime deploys</h3>

@@ -56,7 +56,7 @@ Read by the Fastify BFF at startup. The portal container runs Node 22, not nginx
 | `SESSION_SECRET` | none | required, non-empty | Secret used to sign session cookies. Rotate by restart — invalidates all active sessions. Generate with `openssl rand -hex 32`. |
 | `NEXUS_TOKEN` | none | required, non-empty | Registry token. Held server-side and attached as `X-Nexus-Token` on every proxied call. Never sent to the browser. |
 | `NEXUS_INITIAL_PASSWORD` | none | required ONLY when `users` table is empty | Seed password for the initial `admin` user. Forces password change at first login. Server refuses to start without it on an empty DB. |
-| `DATABASE_PATH` | `/data/portal.db` | absolute path | SQLite file. Mount a named volume at `/data` so users survive restarts. |
+| `DATABASE_URL` | `sqlite:/data/portal.db` | `sqlite:` / `postgres://` / `mysql://` / `mariadb://` URL | Database connection. For SQLite mount a named volume at `/data`. Postgres and MySQL/MariaDB are fully supported. |
 | `SESSION_TTL_SECONDS` | `43200` (12 h) | positive integer | Session cookie + DB row lifetime. |
 | `REGISTRY_URL` | `http://registry:8670` | URL | Where the BFF forwards `/api/registry/*` calls. |
 | `GATEWAY_URL` | `http://gateway:80` | URL | Where the BFF forwards `/remotes/*/{catalog,remoteEntry}.json` calls. |
