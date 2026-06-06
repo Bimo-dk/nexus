@@ -145,7 +145,7 @@ You should see Vite produce `dist/index.html`, `dist/assets/*`, `dist/remoteEntr
 ## 5. Run and register
 
 ```bash
-docker build -t checkout-remote-vue --secret id=npmrc,src=$HOME/.npmrc .
+docker build -t checkout-remote-vue .
 docker run --rm -p 8701:80 \
   -e REGISTRY_INTERNAL_URL=http://host.docker.internal:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

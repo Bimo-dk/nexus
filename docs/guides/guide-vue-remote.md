@@ -174,7 +174,7 @@ The same BuildKit secret pattern as Angular — the `.npmrc` is never persisted 
 ## Run and verify
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-vue .
+docker build -t checkout-vue .
 docker run --rm -p 8701:80 \
   -e REGISTRY_INTERNAL_URL=http://registry:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

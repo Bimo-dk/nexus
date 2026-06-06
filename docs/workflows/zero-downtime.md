@@ -55,8 +55,7 @@ The remote's nginx config may override these — but you typically shouldn't. Th
 
 ```bash
 # Build a new image
-docker build --secret id=npmrc,src=$HOME/.npmrc \
-  -t ghcr.io/yourorg/remote-checkout:1.4.2 .
+docker build -t ghcr.io/yourorg/remote-checkout:1.4.2 .
 
 # Push
 docker push ghcr.io/yourorg/remote-checkout:1.4.2

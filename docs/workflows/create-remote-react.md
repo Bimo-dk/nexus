@@ -64,7 +64,7 @@ npm run build
 ## 6. Containerize
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-react .
+docker build -t checkout-react .
 ```
 
 ## 7. Run with self-registration

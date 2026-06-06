@@ -175,10 +175,10 @@ EXPOSE 80
 HEALTHCHECK CMD wget -qO- http://localhost/ >/dev/null || exit 1
 ```
 
-Build with the secret mounted:
+Build:
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-remote .
+docker build -t checkout-remote .
 ```
 
 ## Run and verify
