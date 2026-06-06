@@ -2,27 +2,49 @@
 id: infra-high-availability
 title: High availability
 sidebar_position: 6
-description: Run Nexus with no single point of failure. SQLite, Postgres, MySQL or MariaDB backed registry, multi-instance registry on Postgres, gateway restart resilience.
+description: Run Nexus in clusters from day one. Three deployment shapes (single-node, replicated, multi-region), stateless horizontal gateway, multi-database registry, browser-side fallback chain, graceful shutdown coordination.
 keywords:
   - high availability frontend
   - micro frontend HA
+  - micro frontend cluster
+  - horizontal scaling micro frontend
   - PostgreSQL LISTEN NOTIFY
+  - replicated micro frontend registry
+  - multi-region micro frontend
   - micro frontend platform
   - zero downtime deployment
 ---
 
 # High availability
 
-This page is honest about what HA looks like in Nexus today and what is on the roadmap. The platform was designed so the path from "single registry instance" to "active-active registry cluster" is a configuration change, not a rewrite.
+Nexus is built to run in clusters. Stateless gateway, replicated registry, browser-side fallback chain — the HA story is the default deployment shape, not a future migration. This page is honest about what HA looks like in Nexus today and what is on the roadmap.
+
+## Deployment shapes
+
+The platform supports three deployment shapes from the same binaries. You pick by configuration.
+
+```
+single-node  ───→  replicated  ───→  multi-region
+ (dev / staging)   (production HA)   (geo redundancy)
+```
+
+| Shape | Gateway | Registry | Database | Operational story |
+|---|---|---|---|---|
+| **Single node** | 1 instance | 1 instance | SQLite (file on a persisted volume) | Dev, staging, small single-region deployments. Tolerates ~30 s read-only fallback during registry restart. Backup is a file snapshot. |
+| **Replicated (production HA)** | N instances behind a load balancer | N instances behind the same load balancer | Postgres, MySQL or MariaDB on a managed cluster | The default production shape. Gateway is stateless and horizontal. Registry replicas share one database — HTTP traffic load-balances cleanly. WebSocket broadcast fan-out across replicas is the only piece pending (see roadmap). |
+| **Multi-region** | N per region | N per region | Region-replicated Postgres | Future shape. Gateways serve the closest registry; registry data flows region-to-region through Postgres replication. Active-active read paths, single-leader writes. |
+
+The same image runs in all three. Operators graduate from single-node to replicated by pointing at a clustered database — no code change, no rebuild.
 
 ## What's shipped today
 
+- **Stateless gateway, designed for N-up.** Run as many gateway instances as you need behind a load balancer. Each maintains its own WebSocket subscription to the registry and its own protection state. Tested and supported. Bans are per-instance.
 - **Multi-engine registry storage.** One binary, four storage backends — SQLite, Postgres, MySQL, MariaDB. The engine is chosen at startup from the connection URL; the schema is identical and created on first boot. See [infra-registry](infra-registry.md#storage) for the URL syntax.
-- **SQLite for single-node deployments.** Single writer, fast reads, durable on a persisted volume. Suitable for a single-region deployment that can tolerate ~30 seconds of read-only fallback while the registry restarts.
-- **Postgres / MySQL / MariaDB for HA.** Run the database on a managed cluster or your own replicated server; the registry container stays stateless. Multiple registry replicas can already share one database for HTTP traffic — the only piece pending is broadcast fan-out across replicas (see "What's on the migration path" below).
-- **Stateless gateway.** Multiple gateway instances behind a load balancer is supported and tested. Each gateway maintains its own WebSocket subscription to the registry and its own protection state. Bans are per-instance.
-- **Host fallback chain.** Browser-side: live registry → `sessionStorage` cache → static backup JSON. Open browser tabs survive a registry restart with no visible impact.
+- **SQLite for single-node deployments.** Single writer, fast reads, durable on a persisted volume. Tolerates ~30 seconds of read-only fallback while the registry restarts.
+- **Postgres / MySQL / MariaDB for HA.** Run the database on a managed cluster or your own replicated server; the registry container stays stateless. Multiple registry replicas share one database for HTTP traffic out of the box — broadcast fan-out across replicas is the only piece pending (see roadmap).
+- **Host fallback chain.** Browser-side: live registry → `sessionStorage` cache → static backup JSON. Open browser tabs survive a 30-minute registry outage with no visible impact.
 - **Graceful shutdown.** The registry broadcasts `registry_shutting_down` with a `resume_in_ms` hint before draining HTTP. Clients are expected to back off for that interval.
+- **Hot-swap routing.** The gateway recomputes its route table from the registry's WebSocket broadcast and swaps it in atomically. New routes are live within milliseconds of a registry write; in-flight connections are unaffected.
 
 ## Migrating from SQLite to Postgres / MySQL / MariaDB
 

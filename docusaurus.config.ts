@@ -9,8 +9,10 @@ const SITE_URL = `https://${CUSTOM_DOMAIN}`;
 
 const DESCRIPTION =
   'Nexus is the open-source micro frontend platform for Angular, Vue, and React. ' +
-  'Rust-powered registry and gateway, dynamic remote loading, multi-domain gates, ' +
-  'built-in DDoS protection, live configuration, and zero-downtime deploys.';
+  'Rust-powered registry and gateway built to run in clusters from day one — ' +
+  'SQLite / Postgres / MySQL / MariaDB storage, stateless gateway, hot-swap routing, ' +
+  'multi-domain gates, registry-level rollback, built-in DDoS protection, ' +
+  'zero-downtime deploys. Cuts platform-plumbing work off product teams.';
 
 const KEYWORDS = [
   'micro frontend',
@@ -27,8 +29,18 @@ const KEYWORDS = [
   'micro frontend gateway',
   'component federation Angular Vue React',
   'Rust web server',
+  'micro frontend HA',
+  'micro frontend cluster',
+  'horizontal scaling micro frontend',
+  'PostgreSQL micro frontend',
+  'multi-database micro frontend',
   'high availability frontend',
   'zero downtime deployment',
+  'platform engineering',
+  'frontend productivity',
+  'frontend time to market',
+  'micro frontend rollback',
+  'micro frontend gate host swap',
   'frontend platform',
   'Bimo Nexus',
 ].join(', ');

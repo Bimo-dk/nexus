@@ -2,7 +2,7 @@
 id: why-nexus
 title: Why Nexus
 sidebar_position: 1
-description: What Module Federation, single-spa, and Native Federation alone do not give you. Why Nexus exists, what it adds, and the honest tradeoffs.
+description: What Module Federation, single-spa, and Native Federation alone do not give you. Concrete business value, sprint-level productivity gains, time-to-market numbers, and the honest tradeoffs.
 keywords:
   - micro frontend
   - micro frontend platform
@@ -13,6 +13,12 @@ keywords:
   - React micro frontend
   - micro frontend registry
   - micro frontend gateway
+  - micro frontend productivity
+  - micro frontend time to market
+  - platform engineering ROI
+  - multi-team frontend
+  - frontend rollback
+  - micro frontend cluster
 ---
 
 # Why Nexus
@@ -40,7 +46,82 @@ Module Federation, Native Federation, single-spa, Bit, Nx — they each solve *o
 
 That is what Nexus *removes*. What it *adds* is one mental model — gates, hosts, remotes — that maps to how product organizations actually think about a frontend estate.
 
-## What it costs you
+## What Nexus gives your business
+
+The platform is built for engineering organizations with more than one team shipping to the same frontend. Concrete value:
+
+| Outcome | How Nexus delivers it |
+|---|---|
+| Each team owns its own deploy cadence | A remote is a container. Teams push to their own image registry on their own schedule — no shared release train, no platform-team bottleneck. |
+| Cross-team UI reuse without npm coordination | `@NexusComponent()` and the catalog let a team in checkout discover and embed components from the orders team in five minutes — no shared library, no version bump dance. |
+| New brand or domain in hours, not weeks | Add a gate in the portal. Same hosts and remotes serve the new domain instantly. No new pipelines, no separate code, no DNS-versus-deploy coordination. |
+| Zero-downtime deploys by default | Cache rules on `remoteEntry.json` + the gateway's hot-swap routing mean a new container is visible the instant it boots. No blue/green pipeline to maintain. |
+| HA + horizontal scale from day one | Gateway is stateless and runs N-up behind a load balancer. Registry runs on Postgres / MySQL / MariaDB for multi-replica deployments. See [infra-high-availability](../infrastructure/infra-high-availability.md). |
+| One platform across three frameworks | Angular, Vue, and React teams share the same registry, gateway, and portal. No "the React team needs their own platform" problem. |
+| Operability without a dedicated platform team | Portal manages hosts, gates, remotes, protection, configuration. A single ops engineer can run the platform for dozens of product teams. |
+| Predictable infrastructure footprint | ~12 MB RSS per registry, ~20 ms cold start, sub-millisecond hot-route swap. Two Rust binaries replace the typical Node+nginx ops surface. |
+
+## How the framework simplifies the developer workflow
+
+The same task, two views — without the platform versus with it:
+
+| Task | Without Nexus | With Nexus |
+|---|---|---|
+| Add a new remote | Write federation manifest, expose it from webpack, wire into host's `loadRemoteModule`, regenerate types, redeploy host | `bnx generate remote` → push container → done. Host already knows about it. |
+| Make a remote available on a new domain | New nginx vhost or ingress, new bundle for branding, separate pipeline, DNS plus deploy coordination | Add a gate in the portal. Per-domain headers via gate config. |
+| Cross-team component reuse | Stand up a shared component library, version it, publish, every consumer bumps and re-tests | `@NexusComponent()` decorates the component, the catalog picks it up, others embed via `<nexus-component remote="..." expose="...">` |
+| Roll back a routing or visibility change | Re-edit by hand or restore a backup of the registry's database | `POST /api/remotes/<name>/rollback { "version": N }` — see the [rollback workflow](../workflows/rollback.md) |
+| Test a new shell against existing remotes | Stand up a parallel environment, point DNS at it for a window | Swap the host on a staging gate — see the [host-swap workflow](../workflows/gate-host-swap.md) |
+| Survive a 30-second registry blip | Each consuming team writes their own retry / cache logic | Built-in three-layer fallback chain (live → sessionStorage → static backup). Open tabs survive a 30-minute outage. |
+| Local dev against shared backend | Build a custom devserver, mock the registry, route to local | `bnx dev` — runs your remote locally, proxies everything else to staging |
+
+## Productivity and time-to-market
+
+These are honest estimates based on a multi-team platform adoption. Your numbers will vary with team maturity, but the *direction* and the *order of magnitude* are what matters.
+
+### Per-task time, before vs. with Nexus
+
+| Task | Without a platform | With Nexus | Saving |
+|---|---|---|---|
+| Scaffold a new remote (decisions + boilerplate) | ~1 day | ~10 minutes | ~95% |
+| Wire that remote into a host application | ~0.5 day | 0 (automatic via registry) | 100% |
+| Add a public domain pointing at existing app | ~3 days (DNS + nginx + pipeline) | ~5 minutes (portal gate) | ~99% |
+| Roll out a UI feature flag across teams | per-team coordination over a sprint | one config push in the registry, hot-applied | days → minutes |
+| Recover from a bad routing change | hours (find the diff, redeploy) | one call to the rollback endpoint | hours → seconds |
+| Cross-team component reuse (first use) | sprint-scale (library, versioning, types) | hours (decorate + embed) | weeks → hours |
+
+### Sprint-level effect
+
+The platform-related work that disappears for a typical product team:
+
+| Sprint activity that goes away | Hours/sprint per team |
+|---|---|
+| Federation config maintenance | 4–8 h |
+| nginx / ingress changes for new remotes | 2–6 h |
+| Custom retry + fallback logic | 2–4 h |
+| Token plumbing and refresh flows | 2–4 h |
+| Cross-team contract negotiation for shared UI | 4–12 h |
+| Manual deploy choreography | 2–6 h |
+| **Total reclaimed per team per sprint** | **~16–40 h** |
+
+For a 6-team organization that's roughly **~100–240 engineering hours per sprint** redirected from platform plumbing to product. Even at the low end, that pays for the platform-engineer slot that runs Nexus several times over.
+
+### Time-to-first-production-remote
+
+Concretely: a tenant team that has Nexus already running in their environment can ship a new remote into production in **half a day**.
+
+```
+T+0    bnx generate remote checkout
+T+30m  cd checkout && npm install && wire one component
+T+1h   docker build + push
+T+1.5h container boots, self-registers, appears in portal
+T+2h   tagged in catalog, embedded into host via <nexus-component>
+T+4h   reviewed, merged, deployed to prod
+```
+
+Compare against the same workflow without a platform layer — federation manifest, host wire-up, nginx/ingress change, registry-of-truth confusion, fallback logic, monitoring hookup — and the typical answer is one to two weeks.
+
+
 
 Honest tradeoffs:
 
