@@ -49,7 +49,7 @@ The complete table of environment variables every Nexus service honors. Anything
 
 ## Portal (`nexus-portal`)
 
-Read by the Fastify BFF at startup. The portal container runs Node 22, not nginx; there is no `assets/config.json` substitution.
+Read by the Express BFF at startup. The portal container runs Node 22, not nginx; there is no `assets/config.json` substitution.
 
 | Variable | Default | Validation | Purpose |
 |---|---|---|---|

@@ -170,7 +170,7 @@ EXPOSE 80
 ## Run and verify
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-react .
+docker build -t checkout-react .
 docker run --rm -p 8702:80 \
   -e REGISTRY_INTERNAL_URL=http://registry:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

@@ -66,7 +66,7 @@ Vite writes `dist/index.html`, `dist/assets/*`, `dist/remoteEntry.json`, and `di
 ## 6. Containerize
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-vue .
+docker build -t checkout-vue .
 ```
 
 ## 7. Run with self-registration

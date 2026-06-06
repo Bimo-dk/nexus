@@ -94,7 +94,7 @@ bnx generate remote
 ? Framework: angular
 
 cd catalog && npm install && npm run build
-docker build --secret id=npmrc,src=$HOME/.npmrc -t catalog .
+docker build -t catalog .
 docker run --rm --name catalog -p 8700:80 \
   -e REGISTRY_INTERNAL_URL=http://registry:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

@@ -17,14 +17,13 @@ This page is the operator's recipe for shipping a Nexus service from a developer
 
 ```bash
 docker build \
-  --secret id=npmrc,src=$HOME/.npmrc \
   -t ghcr.io/yourorg/remote-checkout:$(git rev-parse --short HEAD) \
   -t ghcr.io/yourorg/remote-checkout:1.4.2 \
   -t ghcr.io/yourorg/remote-checkout:latest \
   .
 ```
 
-The `@bimo-dk/*` packages are public on npmjs.com — no auth token is needed for `npm ci` inside the build container.
+The `@bimo-dk/*` packages are public on npmjs.com — no auth token or `.npmrc` secret is needed for `npm ci` inside the build container.
 
 ## Push
 
@@ -51,8 +50,7 @@ In CI:
     tags: |
       ghcr.io/${{ github.repository }}/remote-checkout:${{ github.sha }}
       ghcr.io/${{ github.repository }}/remote-checkout:latest
-    secrets: |
-      "npmrc=${{ secrets.NPMRC_CONTENTS }}"
+    # no secrets needed — @bimo-dk/* packages are public on npmjs.com
 ```
 
 ## Deploy via compose
@@ -132,9 +130,17 @@ Always include a `healthcheck` in compose / a `livenessProbe` in k8s. The gatewa
 
 ## Database backups
 
-The registry's SQLite file is the source of truth. Daily snapshots of the registry volume are the minimum. Test restores at least quarterly.
+Both the registry and the portal store persistent state in a database. Back up both.
 
-For PostgreSQL deployments (when shipped), use standard `pg_basebackup` + WAL archiving.
+**Registry** — holds all remote, host, and gate definitions.
+
+- **SQLite**: snapshot the file (`${DATA_DIR}/registry.db`) on a cadence that matches your RPO. Daily is the minimum; test restores quarterly.
+- **PostgreSQL / MySQL / MariaDB**: use the database's own backup tooling (`pg_basebackup` + WAL archiving, or `mysqldump` + binlog).
+
+**Portal** — holds users, roles, and sessions.
+
+- **SQLite** (default): snapshot `/data/portal.db` from the portal volume. Sessions are ephemeral, but user accounts are not.
+- **PostgreSQL / MySQL / MariaDB**: use the same backup approach as the registry's external DB.
 
 ## Next
 

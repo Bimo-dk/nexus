@@ -148,7 +148,7 @@ Vite produces `dist/index.html`, `dist/assets/*`, `dist/remoteEntry.json`, and `
 ## 5. Run and register
 
 ```bash
-docker build -t checkout-remote-react --secret id=npmrc,src=$HOME/.npmrc .
+docker build -t checkout-remote-react .
 docker run --rm -p 8702:80 \
   -e REGISTRY_INTERNAL_URL=http://host.docker.internal:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

@@ -53,7 +53,7 @@ npm run build
 ### Run via Docker
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t my-host .
+docker build -t my-host .
 docker run --rm -p 8667:80 \
   -e REGISTRY_INTERNAL_URL=http://registry:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \
@@ -92,7 +92,7 @@ npm run build
 ### Run via Docker
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t my-host-vue .
+docker build -t my-host-vue .
 docker run --rm -p 8667:80 \
   -e REGISTRY_INTERNAL_URL=http://registry:8670 \
   -e NEXUS_TOKEN=$NEXUS_TOKEN \

@@ -52,7 +52,7 @@ The `prebuild` script runs `nexus-build`, which writes `federation.config.json`.
 ## 5. Containerize
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t checkout-remote .
+docker build -t checkout-remote .
 ```
 
 ## 6. Run with self-registration

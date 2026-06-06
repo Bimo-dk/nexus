@@ -15,7 +15,7 @@ keywords:
 
 The portal is the admin application for a Nexus platform instance. Everything that the registry stores is editable from this UI. Operators use it to add and remove micro frontends; developers use it to inspect health and rotate tokens; SREs use it to tune protection settings under load.
 
-Code: `nexus-portal/`. Stack: Angular 19 standalone components and Angular Material on the browser side; Node 22 + Fastify + better-sqlite3 + bcrypt on the BFF side, both shipped in the same container. The Angular bundle and the BFF live in the same repo and the same Docker image.
+Code: `nexus-portal/`. Stack: Angular 19 standalone components and Angular Material on the browser side; Node 22 + Express + Knex + bcrypt on the BFF side, both shipped in the same container. The Angular bundle and the BFF live in the same repo and the same Docker image.
 
 ## Layout
 
@@ -99,11 +99,11 @@ Dark and light mode. The default is `system` (respects `prefers-color-scheme`), 
 
 ## Authentication
 
-The portal is gated by username/password login backed by a SQLite database (`/data/portal.db` in the container). The BFF handles every credential — the browser holds only an httpOnly signed session cookie. The registry token (`NEXUS_TOKEN`) lives in the BFF's environment and is never sent to the browser.
+The portal is gated by username/password login backed by a relational database. SQLite is the default (file at `/data/portal.db` in the container); set `DATABASE_URL` to a `postgres://`, `mysql://`, or `mariadb://` URL to use an external database instead. The BFF handles every credential — the browser holds only an httpOnly signed session cookie. The registry token (`NEXUS_TOKEN`) lives in the BFF's environment and is never sent to the browser.
 
 ### First-run
 
-There are no default credentials. When the SQLite file is empty, the portal will refuse to start unless `NEXUS_INITIAL_PASSWORD` is set. If set, it seeds an `admin` user with that password and forces a password change at first login. After that login, the env-var can be unset.
+There are no default credentials. When the `users` table is empty, the portal will refuse to start unless `NEXUS_INITIAL_PASSWORD` is set. If set, it seeds an `admin` user with that password and forces a password change at first login. After that login, the env-var can be unset.
 
 ### Roles
 
