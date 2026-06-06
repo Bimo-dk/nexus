@@ -15,7 +15,7 @@ keywords:
 
 Tenant-facing docs live under [infrastructure/registry](../../infrastructure/infra-registry.md). This page is for the person about to change the registry's code.
 
-Source: [Bimo-dk/nexus-registry](https://github.com/Bimo-dk/nexus-registry). Local path in the workspace: `nexus-registry/`. Stack: Rust 2021, [axum 0.8](https://docs.rs/axum/0.8), [sqlx 0.9](https://docs.rs/sqlx/0.9) (SQLite, tokio runtime), [tokio](https://tokio.rs) with `broadcast` channels, [tower-http](https://docs.rs/tower-http) (CORS, trace), [governor](https://docs.rs/governor) for rate limiting, [reqwest](https://docs.rs/reqwest) for outbound health probes, [prometheus](https://docs.rs/prometheus), [tracing](https://docs.rs/tracing).
+Source: [Bimo-dk/nexus-registry](https://github.com/Bimo-dk/nexus-registry). Local path in the workspace: `nexus-registry/`. Stack: Rust 2021, [axum 0.8](https://docs.rs/axum/0.8), [sqlx 0.9](https://docs.rs/sqlx/0.9) using the `Any` driver to dispatch SQLite / Postgres / MySQL (MariaDB included) at runtime, [tokio](https://tokio.rs) with `broadcast` channels, [tower-http](https://docs.rs/tower-http) (CORS, trace), [governor](https://docs.rs/governor) for rate limiting, [reqwest](https://docs.rs/reqwest) for outbound health probes, [prometheus](https://docs.rs/prometheus), [tracing](https://docs.rs/tracing).
 
 ## Process model
 
@@ -36,7 +36,7 @@ No worker pool. The tokio executor multiplexes everything.
 
 ```text
 AppState  ─── cloned into every handler ──────────────────────────────
- ├─ db:             sqlx::SqlitePool                    (cheap to clone)
+ ├─ db:             store::Db { pool, dialect }         (sqlx::AnyPool + resolved dialect)
  ├─ env:            Arc<EnvConfig>                      (read-only after main)
  ├─ config_store:   Arc<ConfigStore>                    (hot-reloadable platform features)
  ├─ circuit_breaker: Arc<CircuitBreakerRegistry>        (per-remote state)
@@ -84,13 +84,17 @@ Adding a new feature middleware? Decide where it sits in this stack — anything
 
 ## Storage
 
-SQLite via sqlx. Database URL defaults to `sqlite:./data/registry.db`; the data directory is created on boot.
+Multi-dialect via sqlx's `Any` driver. SQLite, PostgreSQL, MySQL and MariaDB are all supported in the same binary — the engine is decided at startup from the connection URL scheme. MariaDB is wire-compatible with MySQL and uses the same driver.
 
-- `store::sqlite` — remote CRUD (`Db`, `init`, `list`, `list_for_host`, `get`, `insert`, `update`, `delete`, `toggle`, `StoreError`).
-- `store::entities` — host + gate CRUD. Returns `DeleteHostOutcome` so the handler can distinguish "gone" from "blocked because gates reference it".
+- `config::database::DatabaseConfig::resolve` reads either `DATABASE_URL` or the `DB_*` split vars, picks a `Dialect`, and assembles the URL. The split vars exist because docker-compose / Kubernetes Secrets handle special characters in passwords better than URL-encoding does.
+- `config::database::Dialect::render` rewrites query placeholders. SQLite and MySQL bind with `?`; Postgres binds with `$1, $2, ...`. The naive scan is safe because no registry SQL contains `?` inside string literals.
+- `store::Db` is a small wrapper: `{ pool: sqlx::AnyPool, dialect: Dialect }`. Cheap to clone. Most query sites do `db.dialect.render("...")` then `sqlx::query(sqlx::AssertSqlSafe(sql.as_ref())).bind(...).execute(db.pool())`.
+- `store::sqlite` — Remote CRUD (`init`, `list`, `list_for_host`, `get`, `insert`, `update`, `delete`, `toggle`) plus the three per-dialect `SCHEMA_*` constants. Despite the filename, all three dialects route through here.
+- `store::entities` — Host + gate CRUD. Returns `DeleteHostOutcome` so the handler can distinguish "gone" from "blocked because gates reference it".
+- `config::store::ConfigStore` owns the seven single-row config tables (rate limit, ws reconnect, circuit breaker, etc.) and the dialect-aware `upsert()` helper. SQLite + Postgres get `ON CONFLICT(id) DO UPDATE SET col = excluded.col`; MySQL gets `ON DUPLICATE KEY UPDATE col = VALUES(col)`.
 - All callsites go through the `store::*` re-exports — handlers should not import from the submodules directly.
 
-The schema is migrated on first boot inside `store::init`. There is no separate `sqlx migrate` step.
+The schema is created on first boot inside `store::init`. Each dialect has its own `SCHEMA_*` constant tuned for that engine (TEXT vs VARCHAR(255) for primary keys, inline `INDEX`/`CONSTRAINT` for MySQL, separate `CREATE INDEX` for the others). No separate migration step. SQLite-only hooks (`PRAGMA foreign_keys`, the visibility-column ALTER, the legacy JSON import) are gated on `dialect == Sqlite`. For SQLite `:memory:` URLs the pool is pinned to a single connection so test schema stays visible across queries.
 
 ## WebSocket hub
 

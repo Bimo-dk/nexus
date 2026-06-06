@@ -155,7 +155,18 @@ A complete schema is in [reference: websocket-messages](../reference/websocket-m
 
 ## Storage
 
-SQLite by default (`sqlite:./data/registry.db`). The schema is created on first boot and migrated forward automatically. PostgreSQL is on the HA roadmap — see [infra-high-availability](infra-high-availability.md).
+The registry supports four database engines in a single binary, picked at startup from the connection URL:
+
+| Engine | URL scheme | When to use |
+|---|---|---|
+| SQLite | `sqlite://` | Single-node, local dev, small deployments. Default if nothing is set — file lives at `${DATA_DIR}/registry.db`. |
+| PostgreSQL | `postgres://` / `postgresql://` | Multi-replica HA, the recommended production choice. |
+| MySQL | `mysql://` | When the team already runs MySQL. |
+| MariaDB | `mariadb://` (alias for `mysql://`) | Wire-compatible with MySQL, same driver. |
+
+Operators choose with either `DATABASE_URL` (single URL) or the `DB_*` split vars (`DB_DRIVER`, `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL`). `DATABASE_URL` wins when both are set. The split vars are friendlier for docker compose / Kubernetes Secrets because they avoid URL-encoding passwords with special characters.
+
+The schema is created on first boot — three per-dialect schema constants live in `store::sqlite`. There is no separate migration step. Multi-replica HA on Postgres or MySQL is now supported; see [infra-high-availability](infra-high-availability.md).
 
 ## Configuration features in detail
 

@@ -20,8 +20,15 @@ The complete table of environment variables every Nexus service honors. Anything
 | `NEXUS_TOKEN` | empty | non-empty in prod | Initial active token. |
 | `NEXUS_TOKEN_PEPPER` | default warning | non-default in prod | HMAC pepper for token hashing. |
 | `ALLOWED_ORIGINS` | `*` | comma-separated origins or `*` | CORS allowlist. |
-| `DATABASE_URL` | `sqlite:./data/registry.db` | sqlx URL | Storage backend. |
-| `DATA_DIR` | `./data` | absolute path | SQLite directory. |
+| `DATABASE_URL` | (empty → falls back to `DB_*` or SQLite) | `sqlite://` / `postgres://` / `mysql://` / `mariadb://` URL | Wins over `DB_*` split vars when set. |
+| `DB_DRIVER` | (empty → `sqlite`) | `sqlite` / `postgres` / `mysql` / `mariadb` | Used only when `DATABASE_URL` is unset. |
+| `DB_HOST` | (empty) | hostname or IP | Required for postgres / mysql / mariadb if `DATABASE_URL` is unset. |
+| `DB_PORT` | `0` → driver default | `1` – `65535` | `0` selects 5432 (pg) or 3306 (mysql). |
+| `DB_USER` | (empty) | username | Required for postgres / mysql / mariadb if `DATABASE_URL` is unset. |
+| `DB_PASSWORD` | (empty) | raw password | URL-encoded internally — pass it raw. |
+| `DB_NAME` | `registry` for SQLite (file path) | database name | For SQLite, defaults to `${DATA_DIR}/registry.db`. |
+| `DB_SSL` | (empty) | `disable` / `prefer` / `require` (pg); `disabled` / `preferred` / `required` (mysql) | Short aliases also work for mysql. Ignored for SQLite. |
+| `DATA_DIR` | `./data` | absolute path | SQLite directory; created on boot. Unused by Postgres / MySQL paths. |
 | `PORT` | `8670` | 1–65535 | Listen port. |
 | `BIND_ADDRESS` | `0.0.0.0` | IPv4 / IPv6 literal | Listen interface. |
 | `NODE_ENV` | `development` | string | Reported in `/api/system/config`. |
@@ -49,7 +56,7 @@ Read by the Fastify BFF at startup. The portal container runs Node 22, not nginx
 | `SESSION_SECRET` | none | required, non-empty | Secret used to sign session cookies. Rotate by restart — invalidates all active sessions. Generate with `openssl rand -hex 32`. |
 | `NEXUS_TOKEN` | none | required, non-empty | Registry token. Held server-side and attached as `X-Nexus-Token` on every proxied call. Never sent to the browser. |
 | `NEXUS_INITIAL_PASSWORD` | none | required ONLY when `users` table is empty | Seed password for the initial `admin` user. Forces password change at first login. Server refuses to start without it on an empty DB. |
-| `DATABASE_PATH` | `/data/portal.db` | absolute path | SQLite file. Mount a named volume at `/data` so users survive restarts. |
+| `DATABASE_URL` | `sqlite:/data/portal.db` | `sqlite:` / `postgres://` / `mysql://` / `mariadb://` URL | Database connection. For SQLite mount a named volume at `/data`. Postgres and MySQL/MariaDB are fully supported. |
 | `SESSION_TTL_SECONDS` | `43200` (12 h) | positive integer | Session cookie + DB row lifetime. |
 | `REGISTRY_URL` | `http://registry:8670` | URL | Where the BFF forwards `/api/registry/*` calls. |
 | `GATEWAY_URL` | `http://gateway:80` | URL | Where the BFF forwards `/remotes/*/{catalog,remoteEntry}.json` calls. |

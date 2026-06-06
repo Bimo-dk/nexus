@@ -88,7 +88,16 @@ curl http://localhost:8670/health
 
 ## Storage
 
-SQLite by default. Mount a volume at `DATA_DIR` so writes persist across restarts. PostgreSQL is the planned HA backend — see [infra-high-availability](../infrastructure/infra-high-availability.md).
+Four engines in the same binary, decided at startup from `DATABASE_URL` (or the `DB_*` split vars):
+
+| Engine | URL scheme | When to use |
+|---|---|---|
+| SQLite | `sqlite://` | Default. Single-node, local dev. Mount a volume at `DATA_DIR` so the file persists across restarts. |
+| Postgres | `postgres://` | Multi-replica HA, the recommended production path. |
+| MySQL | `mysql://` | Teams already on MySQL. |
+| MariaDB | `mariadb://` (alias for `mysql://`) | Wire-compatible with MySQL, same driver. |
+
+See [infra-high-availability](../infrastructure/infra-high-availability.md) for the multi-instance pattern on Postgres.
 
 ## Authentication
 
