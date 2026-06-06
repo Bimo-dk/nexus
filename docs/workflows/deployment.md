@@ -2,11 +2,10 @@
 id: deployment
 title: Deployment
 sidebar_position: 6
-description: Build, tag, and ship a Nexus service. Image registry, BuildKit secrets for GitHub Packages, environment promotion, and rollback.
+description: Build, tag, and ship a Nexus service. Image registry, environment promotion, and rollback.
 keywords:
   - micro frontend deployment
   - docker BuildKit
-  - GitHub Packages
   - rollback
 ---
 
@@ -25,7 +24,7 @@ docker build \
   .
 ```
 
-The BuildKit secret mounts your `.npmrc` (with the GitHub Packages PAT) into the build container at `/root/.npmrc`. The token never lands in image-layer metadata. See [reference: security](../reference/security.md) for why this matters.
+The `@bimo-dk/*` packages are public on npmjs.com — no auth token is needed for `npm ci` inside the build container.
 
 ## Push
 
@@ -90,7 +89,7 @@ Recommended:
 - `Deployment` for each service.
 - `Service` of type `ClusterIP` for internal traffic.
 - `Ingress` only for the gateway and the portal.
-- `Secret` for `NEXUS_TOKEN` and `NODE_AUTH_TOKEN`.
+- `Secret` for `NEXUS_TOKEN`.
 
 ## Environment promotion
 

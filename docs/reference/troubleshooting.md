@@ -116,31 +116,14 @@ Wildcards aren't supported — list each origin.
 
 Either you're sending credentials (then `*` isn't allowed — use the explicit origin) or you have a stale CORS preflight cached. Open DevTools → Network → check the OPTIONS request, then disable cache and retry.
 
-## BuildKit / npm
+## npm
 
 ### `Could not resolve "@bimo-dk/nexus-runtime"` during Docker build
 
-The BuildKit secret didn't reach the build stage. Common causes:
+The `@bimo-dk/*` packages are public on npmjs.com — no auth token is required. Common causes if the install still fails:
 
-- Forgot `--secret id=npmrc,src=$HOME/.npmrc` on `docker build`.
-- The `RUN` line is missing `--mount=type=secret,id=npmrc,target=/root/.npmrc`.
-- The `.npmrc` doesn't have the GitHub Packages line.
-
-Verify locally:
-
-```bash
-cat ~/.npmrc
-# Should include:
-# @bimo-dk:registry=https://npm.pkg.github.com
-# //npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-
-echo $NODE_AUTH_TOKEN | head -c 8
-# Should print eight chars of your PAT.
-```
-
-### `npm error code E401` from GitHub Packages
-
-Your PAT doesn't have `read:packages` scope, or it's expired. Regenerate at github.com → Settings → Developer settings → Personal access tokens.
+- Network connectivity from the build container is blocked.
+- A stale `.npmrc` in the project root still points `@bimo-dk` at `npm.pkg.github.com`. Remove those lines; the default npmjs.com registry resolves the scope automatically.
 
 ## Gateway routing
 

@@ -14,7 +14,7 @@ keywords:
 
 # Packages overview
 
-Nexus ships ten npm packages under the `@bimo-dk/nexus-*` namespace. They live in the `nexus-packages` monorepo and are published to GitHub Packages (`npm.pkg.github.com`).
+Nexus ships ten npm packages under the `@bimo-dk/nexus-*` namespace. They live in the `nexus-packages` monorepo and are published to [npmjs.com](https://www.npmjs.com/org/bimo-dk).
 
 ## The dependency graph
 
@@ -79,16 +79,13 @@ graph BT
 
 All packages follow semver. The repo uses [Changesets](https://github.com/changesets/changesets) to coordinate releases. Major-version bumps are coordinated across packages (e.g., upgrading Angular forces a major bump of `nexus-runtime` and `nexus-ui` together).
 
-## GitHub Packages auth
+## Installing packages
 
-Install with a `.npmrc` that points the `@bimo-dk` scope at GitHub Packages:
+The `@bimo-dk` packages are public — no token or `.npmrc` configuration required:
 
-```ini
-@bimo-dk:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
+```bash
+npm install @bimo-dk/nexus-runtime
 ```
-
-Set `NODE_AUTH_TOKEN` to a GitHub PAT with `read:packages` scope. See [reference: security](../reference/security.md) for the BuildKit-secret pattern that keeps the PAT out of image layers.
 
 ## Next
 
