@@ -110,7 +110,6 @@ Read by `nexus-build` at build time.
 
 | Variable | Purpose |
 |---|---|
-| `NODE_AUTH_TOKEN` | Read from a BuildKit secret named `npmrc`; never via `ARG`. PAT for GitHub Packages. |
 | `DOCKER_BUILDKIT` | Must be `1`. Compose enables it automatically with `# syntax=docker/dockerfile:1.6`. |
 
 ## Where it all comes from

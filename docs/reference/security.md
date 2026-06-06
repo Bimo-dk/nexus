@@ -71,56 +71,13 @@ Wildcards (`*.example.com`) are not supported — list each origin explicitly. T
 
 For the gateway, set `corsOrigins` in the gateway config (via portal or API). Same semantics.
 
-## GitHub Packages auth
+## npm packages
 
-`@bimo-dk/nexus-*` packages live on GitHub Packages. Auth via `.npmrc`:
-
-```ini
-@bimo-dk:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=${NODE_AUTH_TOKEN}
-```
-
-Set `NODE_AUTH_TOKEN` to a GitHub PAT with `read:packages` scope (only).
-
-### Why `NODE_AUTH_TOKEN`, not `GITHUB_TOKEN`
-
-npm interpolates `${NODE_AUTH_TOKEN}` from the environment. `GITHUB_TOKEN` is the GitHub Actions automatic token, which doesn't have `read:packages` by default and has different lifecycle semantics. Keep them separate.
-
-### Docker BuildKit secret pattern
-
-**Never pass the token via `ARG`.** Build-args persist in image layer metadata and are visible to anyone who pulls the image.
-
-Use BuildKit `--mount=type=secret`:
-
-```dockerfile
-# syntax=docker/dockerfile:1.6
-FROM ghcr.io/bimo-dk/nexus-base:latest AS build
-WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN --mount=type=secret,id=npmrc,target=/root/.npmrc npm ci --prefer-offline
-```
-
-Build with the secret mounted from a file:
+`@bimo-dk/nexus-*` packages are public on [npmjs.com](https://www.npmjs.com/org/bimo-dk). No token or `.npmrc` configuration is required to install them:
 
 ```bash
-docker build --secret id=npmrc,src=$HOME/.npmrc -t my-image .
+npm install @bimo-dk/nexus-runtime
 ```
-
-Or in compose:
-
-```yaml
-services:
-  remote:
-    build:
-      context: .
-      secrets: [npmrc]
-
-secrets:
-  npmrc:
-    file: ~/.npmrc
-```
-
-The `.npmrc` exists only during the `RUN` step. It is not part of any image layer. It cannot leak.
 
 ## Gateway protection
 

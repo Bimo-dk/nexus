@@ -37,7 +37,7 @@ A user lands on the storefront. The Angular host bootstraps, fetches the remote 
 ```
 mixed-stack-demo/
 ├── docker-compose.yml           # full stack
-├── .env                         # NEXUS_TOKEN, NODE_AUTH_TOKEN
+├── .env                         # NEXUS_TOKEN
 ├── host-angular/                # Angular host
 ├── remote-orders-vue/           # Vue remote
 └── remote-checkout-react/       # React remote
@@ -147,7 +147,6 @@ The `seed` service registers the host and a gate the first time you boot. After 
 
 ```ini
 NEXUS_TOKEN=replace-with-a-long-random-string
-NODE_AUTH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
 
 ## 3. Angular host

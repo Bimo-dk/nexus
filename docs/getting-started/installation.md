@@ -21,8 +21,6 @@ keywords:
 | docker compose | v2 | The `compose` plugin syntax |
 | Node.js | ≥ 22 | Only for the CLI and the packages workspace |
 | npm | ≥ 10 | Workspace tooling |
-| GitHub PAT | scope `read:packages` | Pull `@bimo-dk/nexus-*` packages |
-
 Verify your toolchain:
 
 ```bash
@@ -73,9 +71,6 @@ NEXUS_TOKEN=replace-with-a-long-random-string
 # Browser origins the registry CORS layer trusts. Comma-separated.
 ALLOWED_ORIGINS=http://localhost:8668,http://localhost:8669
 
-# GitHub Packages auth. Needed by any image that installs @bimo-dk/* packages.
-NODE_AUTH_TOKEN=ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
-
 # Portal session cookie signing secret. Random ≥32 bytes.
 PORTAL_SESSION_SECRET=$(openssl rand -hex 32)
 
@@ -83,14 +78,6 @@ PORTAL_SESSION_SECRET=$(openssl rand -hex 32)
 # table has any rows. Unset after the first admin login + password change.
 PORTAL_INITIAL_PASSWORD=changeme-on-first-login
 ```
-
-:::important
-Use `NODE_AUTH_TOKEN`, not `GITHUB_TOKEN`. The `.npmrc` in each service expects exactly that variable name when authenticating against `npm.pkg.github.com`.
-:::
-
-:::warning Never put the token in an `ARG`
-The Dockerfiles use BuildKit `--mount=type=secret` for `NODE_AUTH_TOKEN`. Tokens passed via `--build-arg` are persisted in image-layer metadata and visible to anyone who inspects the image. Compose injects the token as a secret automatically — do not change the Dockerfile to use `ARG`.
-:::
 
 ## 3. Start the stack
 
@@ -178,7 +165,6 @@ The CLI authenticates against the registry via `NEXUS_TOKEN` and `REGISTRY_URL` 
 |---|---|---|
 | `NEXUS_TOKEN` | registry, host, portal BFF, remotes | none — required |
 | `ALLOWED_ORIGINS` | registry CORS | `*` |
-| `NODE_AUTH_TOKEN` | Docker build (BuildKit secret) | none — required to install packages |
 | `PORTAL_SESSION_SECRET` | portal BFF | none — required |
 | `PORTAL_INITIAL_PASSWORD` | portal BFF | none — required on first boot only |
 | `PORT` | registry | `8670` |
