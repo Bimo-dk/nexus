@@ -20,7 +20,7 @@ Source: [Bimo-dk/nexus-registry](https://github.com/Bimo-dk/nexus-registry). The
 
 | Path | What it is |
 |---|---|
-| `Cargo.toml` | Single-binary crate, version `1.0.0`. Axum 0.8, sqlx (SQLite), tokio, tower-http, reqwest (outbound probes), governor, prometheus, hmac/sha2, tracing. |
+| `Cargo.toml` | Single-binary crate, version `1.0.0`. Axum 0.8, sqlx 0.9 with `any` + `sqlite` + `postgres` + `mysql` + `tls-rustls` features, tokio, tower-http, reqwest (outbound probes), governor, prometheus, hmac/sha2, tracing. |
 | `Dockerfile` | Release build. Strips symbols, thin LTO, codegen-units=1. |
 | `Dockerfile.local` | Build profile used by `nexus-test`'s docker compose stack. No registry-token mounts; cheaper iteration. |
 | `rustfmt.toml` | Style. Match the repo when adding code. |
@@ -59,7 +59,8 @@ Hot-reloadable platform features.
 | File | Owns |
 |---|---|
 | `src/config/mod.rs` | Re-exports + `EnvConfig`. |
-| `src/config/env.rs` | `EnvConfig::from_env()` — every boot-time env var (`PORT`, `BIND_ADDRESS`, `DATABASE_URL`, `DATA_DIR`, `ALLOWED_ORIGINS`, `NEXUS_TOKEN`, `NEXUS_TOKEN_PEPPER`, `LOG_BUFFER_CAPACITY`, `SYSTEM_SERVICES`, `HEALTH_CHECK_INTERVAL_MS`, ...). |
+| `src/config/env.rs` | `EnvConfig::from_env()` — every boot-time env var (`PORT`, `BIND_ADDRESS`, `DATABASE_URL`, `DB_DRIVER`/`HOST`/`PORT`/`USER`/`PASSWORD`/`NAME`/`SSL`, `DATA_DIR`, `ALLOWED_ORIGINS`, `NEXUS_TOKEN`, `NEXUS_TOKEN_PEPPER`, `LOG_BUFFER_CAPACITY`, `SYSTEM_SERVICES`, `HEALTH_CHECK_INTERVAL_MS`, ...). |
+| `src/config/database.rs` | `DatabaseConfig::resolve` picks `DATABASE_URL` or assembles from `DB_*`. `Dialect` enum (`Sqlite`, `Postgres`, `MySql`). `Dialect::render` rewrites `?` to `$N` for Postgres. `Dialect::prep` wraps in `sqlx::AssertSqlSafe` for sqlx 0.9's `SqlSafeStr` bound. `mariadb://` URLs rewrite to `mysql://` internally. Has unit tests for every branch. |
 | `src/config/types.rs` | Strongly-typed config sections — `GatewayProtectionConfig`, `RateLimitConfig`, `WsReconnectConfig`, `CircuitBreakerConfig`, `GracefulShutdownConfig`, `MetricsConfig`, `StoredToken`. |
 | `src/config/defaults.rs` | Default values for each section. Used by `ConfigStore::hydrate` when no row exists. |
 | `src/config/store.rs` | `ConfigStore` — `Arc`-shared `parking_lot::RwLock` snapshots per section. `hydrate(db)` reads from the `config` table; getter methods (`gateway_protection()`, `ws_reconnect()`, `token()`, etc.) return `Arc<Section>`. |
@@ -80,13 +81,13 @@ Cross-cutting concerns. Each module is the boundary between application logic an
 
 ### Storage (`src/store/`)
 
-All sqlx access lives here. Handlers must not import sqlx directly.
+All sqlx access lives here. Handlers must not import sqlx directly. Despite the filename `sqlite.rs`, every dialect (SQLite, Postgres, MySQL / MariaDB) routes through these functions — the dispatch is via `Db.dialect` and the per-dialect `SCHEMA_*` constants.
 
 | File | Owns |
 |---|---|
 | `src/store/mod.rs` | Re-exports the public surface. |
-| `src/store/sqlite.rs` | `Db = SqlitePool`, `init` (open + migrate), `list`, `list_for_host`, `get`, `insert`, `update`, `delete`, `toggle`, `StoreError`. Remote table. |
-| `src/store/entities.rs` | Host + gate CRUD (`insert_host`, `list_hosts`, `get_host`, `host_exists`, `update_host`, `toggle_host`, `delete_host` → `DeleteHostOutcome`; equivalents for gate including `get_gate_by_domain`). |
+| `src/store/sqlite.rs` | `Db { pool: sqlx::AnyPool, dialect: Dialect }`, `init(cfg, data_dir)`, three `SCHEMA_*` constants, `sqlite_url_with_create_mode` for SQLite create-if-missing via URL, `list`, `list_for_host`, `get`, `insert`, `update`, `delete`, `toggle`, `is_unique_violation` (dispatches across SQLite code 2067, Postgres SQLSTATE 23505, MySQL code 1062), `StoreError`. |
+| `src/store/entities.rs` | Host + gate CRUD using `sqlx::any::AnyRow` (`insert_host`, `list_hosts`, `get_host`, `host_exists`, `update_host`, `toggle_host`, `delete_host` → `DeleteHostOutcome`; equivalents for gate including `get_gate_by_domain`). |
 
 ### WebSocket (`src/ws/`)
 
@@ -119,7 +120,8 @@ All sqlx access lives here. Handlers must not import sqlx directly.
 | Add a new hot-reloadable config section | `config/types.rs` (struct + serde), `config/defaults.rs`, `config/store.rs` (getter + setter), `config/routes.rs` (handler), `ws/messages.rs` only if a dedicated `*_changed` event makes sense; otherwise the generic `config_changed { section, value }` is enough. |
 | Add a new WS server message | `ws/messages.rs` (new variant), `ws/hub.rs` (`broadcast_*` helper + `message_kind`), then add it on the consuming gateway/SDK side. |
 | Add a new env var | `config/env.rs` (`EnvConfig::from_env`), document in `nexus/docs/reference/environment.md`. If it should be hot-reloadable, do not add it here — add a `ConfigStore` section instead. |
-| Add a remote field | `types.rs` (struct + serde), `store/sqlite.rs` (column + migration in `init`), `api/remotes.rs` (validation + handler), `validators.rs` (if it needs format checks). |
+| Add a remote field | `types.rs` (struct + serde), `store/sqlite.rs` (add column to **all three** `SCHEMA_*` constants + update the INSERT/SELECT lists), `api/remotes.rs` (validation + handler), `validators.rs` (if it needs format checks). |
+| Add support for another SQL dialect | New variant on `config::database::Dialect`, `match` arms in `render` / `prep` / `is_unique_violation` / the `upsert` helper, new `SCHEMA_*` constant + branch in `schema_for`, install the new sqlx driver feature in `Cargo.toml`. |
 | Change auth | `features/token.rs` — never write a token comparison anywhere else. Update `verify_token` + the upgrade path in `ws/hub.rs` together. |
 | Change CORS | `main.rs::build_cors`. Add headers to `allowed_headers` if a new client header is required. |
 | Add a per-remote metric | `observability/metrics.rs` for in-process JSON, or `features/metrics.rs` for prometheus. |

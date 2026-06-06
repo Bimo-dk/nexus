@@ -20,8 +20,15 @@ The complete table of environment variables every Nexus service honors. Anything
 | `NEXUS_TOKEN` | empty | non-empty in prod | Initial active token. |
 | `NEXUS_TOKEN_PEPPER` | default warning | non-default in prod | HMAC pepper for token hashing. |
 | `ALLOWED_ORIGINS` | `*` | comma-separated origins or `*` | CORS allowlist. |
-| `DATABASE_URL` | `sqlite:./data/registry.db` | sqlx URL | Storage backend. |
-| `DATA_DIR` | `./data` | absolute path | SQLite directory. |
+| `DATABASE_URL` | (empty → falls back to `DB_*` or SQLite) | `sqlite://` / `postgres://` / `mysql://` / `mariadb://` URL | Wins over `DB_*` split vars when set. |
+| `DB_DRIVER` | (empty → `sqlite`) | `sqlite` / `postgres` / `mysql` / `mariadb` | Used only when `DATABASE_URL` is unset. |
+| `DB_HOST` | (empty) | hostname or IP | Required for postgres / mysql / mariadb if `DATABASE_URL` is unset. |
+| `DB_PORT` | `0` → driver default | `1` – `65535` | `0` selects 5432 (pg) or 3306 (mysql). |
+| `DB_USER` | (empty) | username | Required for postgres / mysql / mariadb if `DATABASE_URL` is unset. |
+| `DB_PASSWORD` | (empty) | raw password | URL-encoded internally — pass it raw. |
+| `DB_NAME` | `registry` for SQLite (file path) | database name | For SQLite, defaults to `${DATA_DIR}/registry.db`. |
+| `DB_SSL` | (empty) | `disable` / `prefer` / `require` (pg); `disabled` / `preferred` / `required` (mysql) | Short aliases also work for mysql. Ignored for SQLite. |
+| `DATA_DIR` | `./data` | absolute path | SQLite directory; created on boot. Unused by Postgres / MySQL paths. |
 | `PORT` | `8670` | 1–65535 | Listen port. |
 | `BIND_ADDRESS` | `0.0.0.0` | IPv4 / IPv6 literal | Listen interface. |
 | `NODE_ENV` | `development` | string | Reported in `/api/system/config`. |
