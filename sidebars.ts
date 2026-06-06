@@ -9,6 +9,7 @@ const sidebars: SidebarsConfig = {
       collapsed: false,
       items: [
         'getting-started/why-nexus',
+        'getting-started/productivity',
         'getting-started/overview',
         'getting-started/installation',
         'getting-started/architecture',
@@ -45,6 +46,8 @@ const sidebars: SidebarsConfig = {
         'workflows/deployment',
         'workflows/multi-domain-setup',
         'workflows/hosts-and-gates-setup',
+        'workflows/gate-host-swap',
+        'workflows/rollback',
         'workflows/protection-setup',
         'workflows/component-catalog',
         'workflows/loading-patterns',

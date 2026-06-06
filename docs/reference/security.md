@@ -19,24 +19,21 @@ This page is the platform-level security reference. For protection layer operati
 
 The Nexus deployment shape is what makes the rest of this page coherent:
 
-- **Public surface (one per environment):** the **gateway** is the only service bound to a public port. End users only ever talk to the gateway.
-- **Public admin surface:** the **portal** is bound to a separate public port for operators only. Put it behind a VPN, SSO, or IP allowlist — it is gated by username/password login and role-based access, but treat the port itself as a sensitive admin surface.
-- **Internal-only:** the **registry**, every **host**, and every **remote** live on the internal container network with no host port mapping. Nothing outside the cluster can reach them.
+- **Public-internet surface (one per environment):** the **gateway** is the only service exposed to the public internet. End users only ever talk to the gateway.
+- **Operator-browser surface, internal-only:** the **portal** is a web UI reached by operators in a browser — but the browser sits inside the trust boundary (corporate LAN, VPN, bastion, jump host). The port is not bound to the public internet. It is also gated by username/password login and role-based access.
+- **Service-to-service only:** the **registry**, every **host**, and every **remote** live on the internal container network with no host port mapping. Nothing outside the cluster can reach them; even the portal browser goes via the portal BFF, not directly.
 
 ```
-                    ┌─────────────────────────────┐
-                    │  Public internet            │
-                    └──────────┬──────────────────┘
-                               │       (only :8668 + :8669)
-                ┌──────────────▼──────────────┐
-                │  Gateway (8668)             │ ──── public
-                │  Portal  (8669, admin only) │ ──── public, lock down
-                └──────────────┬──────────────┘
-                               │   internal docker network / VPC
-        ┌──────────────────────┼──────────────────────┐
-        ▼                      ▼                      ▼
-   Registry (8670)        Host containers        Remote containers
-   no host port           no host port           no host port
+        Public internet
+             │
+             ▼  (only :8668)
+        Gateway                            ← end users
+        ============== trust boundary ==============
+        Portal  (:8669)                    ← operator browsers via VPN / LAN
+                                             (BFF talks to registry internally)
+        Registry (:8670)                   ← service-to-service only
+        Host containers                    ← gateway proxies to these
+        Remote containers                  ← gateway proxies to these
 ```
 
 The `[Ports and URLs](../getting-started/ports-and-urls.md)` page lists every port that is and is not exposed.
