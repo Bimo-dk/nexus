@@ -15,19 +15,19 @@ keywords:
 
 ## Production stack (docker-compose.yml)
 
-| Service | Container port | Host port | Visible to browser |
+| Service | Container port | Host port | Reachable from |
 |---|---|---|---|
-| `gateway` | 8668 | **8668** | yes — the public entry |
-| `portal` | 80 | **8669** | yes — admin, lock down at the edge |
-| `registry` | 8670 | — | no — internal only |
-| `host-*` | 80 | — | no — internal only |
-| `remote-*` | 80 | — | no — internal only |
+| `gateway` | 8668 | **8668** | public internet — the only public-facing service |
+| `portal` | 80 | **8669** | operator browsers inside the trust boundary (LAN / VPN / bastion). Not bound to the public internet. |
+| `registry` | 8670 | — | service-to-service only, internal network |
+| `host-*` | 80 | — | gateway proxy only, internal network |
+| `remote-*` | 80 | — | gateway proxy only, internal network |
 
-The browser only ever talks to `:8668` (application) and `:8669` (admin portal). Every other service is reached through the gateway's reverse proxy.
+End users only ever reach `:8668` (the application). Operators reach `:8669` (the admin portal) from inside the trust boundary — same docker network, corporate LAN, or VPN. Every other service is reached through the gateway's reverse proxy or service-to-service inside the cluster.
 
 ### Why this is the trust boundary
 
-Only the gateway and portal bind ports on the docker host. The registry, hosts, and remotes are reachable solely from inside the docker network or your cluster's VPC. This is the security model — see [reference: security — Network trust boundary](../reference/security.md#network-trust-boundary) for the full picture. The short version: `NEXUS_TOKEN` is a machine-to-machine secret that never crosses the public-internet boundary in a healthy deployment, which is why a single shared symmetric token is the right shape for this topology.
+Only the gateway is exposed to the public internet. The portal is browser-accessible but the host you reach it from must be inside the trust boundary (operator workstation on VPN / LAN, jump host, etc.) — never the open internet. The registry, hosts, and remotes are reachable solely from inside the cluster. This is the security model — see [reference: security — Network trust boundary](../reference/security.md#network-trust-boundary) for the full picture. The short version: `NEXUS_TOKEN` is a machine-to-machine secret that never crosses the public-internet boundary in a healthy deployment, which is why a single shared symmetric token is the right shape for this topology.
 
 ## Dev stack (docker-compose.dev.yml)
 
