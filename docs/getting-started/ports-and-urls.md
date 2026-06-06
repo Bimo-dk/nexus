@@ -18,12 +18,16 @@ keywords:
 | Service | Container port | Host port | Visible to browser |
 |---|---|---|---|
 | `gateway` | 8668 | **8668** | yes — the public entry |
-| `portal` | 80 | **8669** | yes — admin |
-| `registry` | 8670 | — | no |
-| `host-*` | 80 | — | no |
-| `remote-*` | 80 | — | no |
+| `portal` | 80 | **8669** | yes — admin, lock down at the edge |
+| `registry` | 8670 | — | no — internal only |
+| `host-*` | 80 | — | no — internal only |
+| `remote-*` | 80 | — | no — internal only |
 
 The browser only ever talks to `:8668` (application) and `:8669` (admin portal). Every other service is reached through the gateway's reverse proxy.
+
+### Why this is the trust boundary
+
+Only the gateway and portal bind ports on the docker host. The registry, hosts, and remotes are reachable solely from inside the docker network or your cluster's VPC. This is the security model — see [reference: security — Network trust boundary](../reference/security.md#network-trust-boundary) for the full picture. The short version: `NEXUS_TOKEN` is a machine-to-machine secret that never crosses the public-internet boundary in a healthy deployment, which is why a single shared symmetric token is the right shape for this topology.
 
 ## Dev stack (docker-compose.dev.yml)
 

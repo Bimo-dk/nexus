@@ -15,18 +15,46 @@ keywords:
 
 This page is the platform-level security reference. For protection layer operations, see [infra-protection](../infrastructure/infra-protection.md).
 
+## Network trust boundary
+
+The Nexus deployment shape is what makes the rest of this page coherent:
+
+- **Public surface (one per environment):** the **gateway** is the only service bound to a public port. End users only ever talk to the gateway.
+- **Public admin surface:** the **portal** is bound to a separate public port for operators only. Put it behind a VPN, SSO, or IP allowlist — it is gated by username/password login and role-based access, but treat the port itself as a sensitive admin surface.
+- **Internal-only:** the **registry**, every **host**, and every **remote** live on the internal container network with no host port mapping. Nothing outside the cluster can reach them.
+
+```
+                    ┌─────────────────────────────┐
+                    │  Public internet            │
+                    └──────────┬──────────────────┘
+                               │       (only :8668 + :8669)
+                ┌──────────────▼──────────────┐
+                │  Gateway (8668)             │ ──── public
+                │  Portal  (8669, admin only) │ ──── public, lock down
+                └──────────────┬──────────────┘
+                               │   internal docker network / VPC
+        ┌──────────────────────┼──────────────────────┐
+        ▼                      ▼                      ▼
+   Registry (8670)        Host containers        Remote containers
+   no host port           no host port           no host port
+```
+
+The `[Ports and URLs](../getting-started/ports-and-urls.md)` page lists every port that is and is not exposed.
+
+This topology is *why* the token model below works the way it does — the shared `NEXUS_TOKEN` never crosses the public-internet trust boundary. It only travels between services that already share an internal network.
+
 ## Auth boundaries
 
 Nexus has two distinct auth surfaces:
 
-- **Machine-to-machine** — every direct call to the registry, gateway, host, or remote APIs uses the shared secret `NEXUS_TOKEN` in the `X-Nexus-Token` header. This is how the gateway authenticates to the registry, how `bnx` talks to the registry, and how the portal BFF forwards to the registry. Treat the token like a database password.
+- **Machine-to-machine (internal network only)** — every direct call to the registry, gateway, host, or remote APIs uses the shared secret `NEXUS_TOKEN` in the `X-Nexus-Token` header. This is how the gateway authenticates to the registry, how `bnx` talks to the registry, and how the portal BFF forwards to the registry. Because of the trust boundary above, this header never leaves the internal network in a healthy deployment. Treat the token like a database password.
 - **Human-to-portal** — the admin portal is gated by username/password login, session cookies, and role-based access (admin / developer). The `NEXUS_TOKEN` for the registry is held inside the portal BFF's environment and is never sent to the browser.
 
 The rest of this section covers the machine token. For the portal's auth model, see [Infra: portal — Authentication](../infrastructure/infra-portal.md#authentication).
 
 ## Token model
 
-The machine token model is **single shared secret**: `NEXUS_TOKEN` is required for every `/api/*` call to the registry, gateway, and host. Anyone with the token can mutate every host, gate, remote, and configuration setting. Treat it like a database password.
+The machine token model is **single shared secret**: `NEXUS_TOKEN` is required for every `/api/*` call to the registry, gateway, and host. Anyone with the token can mutate every host, gate, remote, and configuration setting. Because the token only flows between services on the internal network — never to a browser, never across the public internet — a shared symmetric secret is appropriate for the deployment shape. Treat it like a database password: rotate on a schedule, store in your secret manager, never commit to git.
 
 ### Rotation
 
@@ -55,7 +83,7 @@ Tokens are stored as HMAC-SHA256 hashes with a `NEXUS_TOKEN_PEPPER`. Set the pep
 
 ### What's on the roadmap
 
-Per-identity machine tokens with role-based scopes (`read:remotes`, `write:hosts`, …) for direct API calls. Not shipped today — the machine token remains a single shared secret.
+Per-identity machine tokens with role-based scopes (`read:remotes`, `write:hosts`, …) for direct API calls. Not shipped today, and not urgent for the standard deployment shape: the internal-only trust boundary means a single shared secret is adequate. Per-identity tokens become relevant if you ever expose `/api/*` outside the cluster (which is not the recommended deployment).
 
 Per-identity RBAC for the **portal** (admin vs developer, password-backed login) **is** shipped. See [Infra: portal — Authentication](../infrastructure/infra-portal.md#authentication).
 
