@@ -43,6 +43,13 @@ const KEYWORDS = [
   'micro frontend gate host swap',
   'frontend platform',
   'Bimo Nexus',
+  'Bimo micro frontend',
+  'Steffen Vitten Pedersen',
+  'Steffen Vitten Pedersen Bimo',
+  'Steffen Vitten Pedersen Nexus',
+  'AGPL micro frontend',
+  'AGPL-3.0 micro frontend platform',
+  'dual license micro frontend',
 ].join(', ');
 
 const JSON_LD_SOFTWARE: Record<string, unknown> = {
@@ -53,7 +60,27 @@ const JSON_LD_SOFTWARE: Record<string, unknown> = {
   operatingSystem: 'Any',
   description: DESCRIPTION,
   url: SITE_URL,
-  author: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  author: [
+    {
+      '@type': 'Person',
+      name: 'Steffen Vitten Pedersen',
+      email: 'svp@bimo.dk',
+      jobTitle: 'Creator and lead maintainer of Nexus',
+      affiliation: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+      url: 'https://nexus.bimo.dk/about',
+    },
+    { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  ],
+  creator: {
+    '@type': 'Person',
+    name: 'Steffen Vitten Pedersen',
+    email: 'svp@bimo.dk',
+    affiliation: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  },
+  publisher: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  dateCreated: '2024-01-01',
+  copyrightYear: 2026,
+  copyrightHolder: { '@type': 'Person', name: 'Steffen Vitten Pedersen' },
   license: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}/blob/main/LICENSE`,
   programmingLanguage: ['Rust', 'TypeScript'],
   runtimePlatform: ['Linux', 'Docker'],
@@ -72,6 +99,21 @@ const JSON_LD_ORGANIZATION: Record<string, unknown> = {
   url: 'https://bimo.dk',
   logo: `${SITE_URL}/img/logo.svg`,
   sameAs: [`https://github.com/${GITHUB_ORG}`],
+  founder: { '@type': 'Person', name: 'Steffen Vitten Pedersen' },
+  knowsAbout: ['Nexus', 'micro frontends', 'Angular', 'Vue', 'React', 'Rust', 'TypeScript'],
+};
+
+const JSON_LD_PERSON: Record<string, unknown> = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: 'Steffen Vitten Pedersen',
+  email: 'svp@bimo.dk',
+  jobTitle: 'Creator and lead maintainer of Nexus',
+  affiliation: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  url: `${SITE_URL}/about`,
+  worksFor: { '@type': 'Organization', name: 'Bimo', url: 'https://bimo.dk' },
+  knowsAbout: ['Nexus', 'micro frontends', 'Angular', 'Vue', 'React', 'Rust', 'native federation'],
+  description: 'Built Nexus inside Bimo in 2024 and led its open-source release in 2026.',
 };
 
 const JSON_LD_WEBSITE: Record<string, unknown> = {
@@ -81,6 +123,7 @@ const JSON_LD_WEBSITE: Record<string, unknown> = {
   url: SITE_URL,
   description: DESCRIPTION,
   publisher: { '@type': 'Organization', name: 'Bimo' },
+  author: { '@type': 'Person', name: 'Steffen Vitten Pedersen', email: 'svp@bimo.dk' },
   potentialAction: {
     '@type': 'SearchAction',
     target: { '@type': 'EntryPoint', urlTemplate: `${SITE_URL}/search?q={search_term_string}` },
@@ -147,6 +190,11 @@ const config: Config = {
       innerHTML: JSON.stringify(JSON_LD_WEBSITE),
     },
     {
+      tagName: 'script',
+      attributes: { type: 'application/ld+json' },
+      innerHTML: JSON.stringify(JSON_LD_PERSON),
+    },
+    {
       tagName: 'link',
       attributes: { rel: 'preconnect', href: 'https://github.com' },
     },
@@ -190,7 +238,9 @@ const config: Config = {
     metadata: [
       { name: 'description', content: DESCRIPTION },
       { name: 'keywords', content: KEYWORDS },
-      { name: 'author', content: 'Bimo' },
+      { name: 'author', content: 'Steffen Vitten Pedersen (Bimo)' },
+      { name: 'creator', content: 'Steffen Vitten Pedersen' },
+      { name: 'publisher', content: 'Bimo' },
       {
         name: 'robots',
         content: 'index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1',
@@ -327,14 +377,15 @@ const config: Config = {
               href: `https://github.com/orgs/${GITHUB_ORG}/packages`,
             },
             {
-              label: 'License (MIT)',
+              label: 'License (AGPL-3.0)',
               href: `https://github.com/${GITHUB_ORG}/${GITHUB_REPO}/blob/main/LICENSE`,
             },
+            { label: 'Commercial license', to: '/commercial-license' },
             { label: 'llms.txt', href: 'pathname:///llms.txt' },
           ],
         },
       ],
-      copyright: `Nexus — the open-source micro frontend platform for Angular, Vue, and React. Built by Bimo. © ${new Date().getFullYear()}`,
+      copyright: `Nexus — built by Steffen Vitten Pedersen at Bimo. Dual-licensed AGPL-3.0-or-later or commercial (svp@bimo.dk). © ${new Date().getFullYear()}`,
     },
     prism: {
       theme: prismThemes.github,

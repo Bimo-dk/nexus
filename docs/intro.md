@@ -21,7 +21,7 @@ keywords:
 # Nexus
 
 > **The production micro frontend platform for Angular, Vue, and React.**
-> One Rust-powered registry. One Rust-powered gateway. Unlimited applications. MIT-licensed.
+> One Rust-powered registry. One Rust-powered gateway. Unlimited applications. Dual-licensed AGPL-3.0-or-later or commercial.
 
 Every other micro frontend tool solves one half of the problem. The build-time half (Module Federation) or the routing half (single-spa) or the components half (Bit). Nexus solves the *complete* problem: a Rust registry that hosts, gates and remotes register against; a Rust gateway that builds its proxy table from that registry at runtime; an admin portal; built-in DDoS protection; and adapter packages so an Angular host can load a Vue remote and a React remote in the same browser tab.
 
