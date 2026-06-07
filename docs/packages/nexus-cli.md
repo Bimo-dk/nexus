@@ -2,18 +2,24 @@
 id: nexus-cli
 title: '@bimo-dk/nexus-cli (bnx)'
 sidebar_position: 9
-description: The bnx CLI for Nexus. Scaffold remotes for Angular, Vue, or React; manage hosts and gates; publish, status, health, and bnx dev.
+description: The bnx CLI for Nexus. Bootstrap a workspace, scaffold hosts/remotes/components across Angular, Vue, and React; multi-gateway-stack dev proxy; publish, status, health, and registry management.
 keywords:
   - bnx cli
+  - bnx init
+  - bnx generate host
+  - bnx generate component
   - nexus cli
   - micro frontend scaffold
   - bnx dev
+  - multi environment dev
   - bnx hosts gates
 ---
 
 # @bimo-dk/nexus-cli (bnx)
 
-`bnx` is the developer-facing CLI for Nexus. Scaffold remotes, manage hosts and gates, run the local dev environment, check health, publish.
+`bnx` is the developer-facing CLI for Nexus. Bootstrap a workspace, scaffold hosts/remotes/components, run the local dev environment against any of your gateway stacks, manage hosts and gates, publish.
+
+For a guided end-to-end walkthrough, read [Local dev mode — step by step](../workflows/dev-mode.md). This page is the per-command reference.
 
 ## Install
 
@@ -34,6 +40,56 @@ export REGISTRY_URL=http://localhost:8668
 
 ## Commands
 
+### `bnx init`
+
+Bootstraps a new workspace. Writes `nexus.config.json` with one or more gateway stacks (local docker-compose, staging, prod, custom) and a `.env.example` listing every required token env-var. Optionally scaffolds a host inline (delegates to `bnx generate host`).
+
+```bash
+bnx init
+? Which gateway stacks (environments) will you work against? (Space to select)
+  [x] local (docker-compose: gateway on http://localhost:8668)
+  [x] staging (e.g. https://nexus-staging.bimo.dk)
+  [ ] prod (e.g. https://nexus.bimo.dk)
+? [local]   gateway URL: http://localhost:8668
+? [local]   env-var name that holds NEXUS_TOKEN for this stack: NEXUS_TOKEN_LOCAL
+? [staging] gateway URL: https://nexus-staging.bimo.dk
+? [staging] env-var name that holds NEXUS_TOKEN for this stack: NEXUS_TOKEN_STAGING
+? Default stack for `bnx dev` (overridable with --env): staging
+? Scaffold a host now? Yes
+```
+
+Refuses to overwrite an existing `nexus.config.json`. Each stack records the *env-var name* that holds its token, never the token itself.
+
+### `bnx generate host`
+
+Scaffolds a new host shell from `nexus-host-template-{angular,vue,react}`.
+
+```bash
+bnx generate host
+? Host name (kebab-case, e.g. shop-host): admin
+? Host framework: angular | vue | react
+```
+
+Flags:
+- `-n, --name <name>` — preset name.
+- `-f, --framework <fw>` — preset framework.
+
+### `bnx generate component <Name>`
+
+Scaffolds a single component file with `defineNexusComponent` (Vue/React) or `@NexusComponent` (Angular) metadata. Framework is autodetected from the current remote's `package.json`. The next `npm run build` picks it up automatically through `nexusViteAuto()` (Vue/React) or the Angular scanner — no `vite.config.ts` edit per component.
+
+```bash
+bnx generate component Cart -c commerce -d "Sticky cart" -t "vue,cart"
++ wrote src/Cart.vue
+```
+
+Flags:
+- `-f, --framework <fw>` — override the autodetected framework.
+- `-c, --category <category>` — catalog category.
+- `-d, --description <text>` — one-line catalog description.
+- `-t, --tags <csv>` — comma-separated catalog tags.
+- `-o, --out-dir <dir>` — output directory (default `src`).
+
 ### `bnx generate remote`
 
 ```bash
@@ -51,7 +107,17 @@ Flags:
 
 ### `bnx publish`
 
-Registers the current remote with the registry. Reads `federation.config.json` (Angular) or the `nexusVite` config (Vue / React) to determine name and exposed module.
+Registers the current remote with the registry. Reads `federation.config.json` to determine name and exposed module, then reports how many catalog entries the build produced (read from `dist/catalog.json`). The portal aggregates the per-remote catalog files at request time, so this count is a sanity check that your component metadata made it into the artifact.
+
+```
+> Publishing "cart" to https://nexus-staging.bimo.dk/api/remotes
++ Registered "cart"
+  catalog: 4 components in dist/catalog.json
+    - ./RemoteEntry         Cart entry
+    - ./CartBadge           Sticky cart badge
+    - ./CartDrawer          Slide-in cart drawer
+    - ./CheckoutButton      Checkout CTA button
+```
 
 ### `bnx status`
 
@@ -87,23 +153,25 @@ users     down       (connection refused)
 Starts the local dev proxy with autostart for any configured remotes.
 
 ```bash
-bnx dev
+bnx dev                            # uses dev.baseEnv from nexus.config.json
+bnx dev --env local                # work against http://localhost:8668 (docker-compose)
+bnx dev --env staging              # work against staging
+bnx dev --env prod                 # read-only smoke against prod
 bnx dev status                     # what's running locally
-bnx dev --gate storefront-prod     # impersonate a specific gate
+bnx dev --gate storefront-prod     # impersonate a specific gate (sets NEXUS_GATE_NAME)
 bnx dev --port 9001
 bnx dev --no-open
 bnx dev --no-autostart
 ```
 
-Configuration lives in `nexus.config.json`:
+Configuration lives in `nexus.config.json` — written by `bnx init` and editable by hand. Every entry under `environments` is a gateway stack the workspace can target:
 
 ```jsonc
 {
   "environments": {
-    "staging": {
-      "publicUrl": "https://nexus-staging.example.com",
-      "tokenEnv": "NEXUS_STAGING_TOKEN"
-    }
+    "local":   { "publicUrl": "http://localhost:8668",         "tokenEnv": "NEXUS_TOKEN_LOCAL"   },
+    "staging": { "publicUrl": "https://nexus-staging.bimo.dk", "tokenEnv": "NEXUS_TOKEN_STAGING" },
+    "prod":    { "publicUrl": "https://nexus.bimo.dk",         "tokenEnv": "NEXUS_TOKEN_PROD"    }
   },
   "dev": {
     "baseEnv": "staging",
@@ -116,6 +184,8 @@ Configuration lives in `nexus.config.json`:
   }
 }
 ```
+
+`dev.baseEnv` is the default; `bnx dev --env <name>` overrides per run.
 
 See [workflows: dev-mode](../workflows/dev-mode.md) for the full recipe.
 

@@ -310,7 +310,7 @@ graph TB
   </div>
   <div className="nexus-card">
     <h3>CLI scaffolding</h3>
-    <p>bnx generate, bnx dev, bnx hosts, bnx gates, bnx publish, bnx status, bnx health.</p>
+    <p><code>bnx init</code> bootstraps a workspace with multiple gateway stacks. <code>bnx generate host / remote / component</code> scaffolds every artifact. <code>bnx dev --env &lt;stack&gt;</code> picks which environment to develop against.</p>
   </div>
 </div>
 
@@ -318,6 +318,7 @@ graph TB
 
 ## Where to next
 
+- **[Local dev mode — step by step](workflows/dev-mode.md)** — full walkthrough from `bnx init` to seeing your remote in the portal, with screenshots and diagrams.
 - **[Read the Angular quick start](getting-started/quick-start-angular.md)** — five minutes from `git clone` to a running remote.
 - **[Read the Vue quick start](getting-started/quick-start-vue.md)** — five minutes from `git clone` to a running remote.
 - **[Read the React quick start](getting-started/quick-start-react.md)** — five minutes from `git clone` to a running remote.
