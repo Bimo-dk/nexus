@@ -46,6 +46,7 @@ parent-folder/
 ├── nexus-portal/
 ├── nexus-host-template/         # Angular host scaffold
 ├── nexus-host-template-vue/     # Vue host scaffold
+├── nexus-host-template-react/   # React host scaffold
 ├── nexus-remote-templat/        # Angular remote scaffold
 ├── nexus-remote-templat-vue/    # Vue remote scaffold
 ├── nexus-remote-templat-react/  # React remote scaffold
@@ -78,6 +79,30 @@ PORTAL_SESSION_SECRET=$(openssl rand -hex 32)
 # table has any rows. Unset after the first admin login + password change.
 PORTAL_INITIAL_PASSWORD=changeme-on-first-login
 ```
+
+### Picking a database
+
+Default storage is SQLite, written into a container volume — convenient for
+single-node deployments and demos. Both the registry (Rust + sqlx::Any) and
+the portal (Node + Knex) read a `DATABASE_URL` env-var and switch driver
+automatically based on the URL scheme:
+
+```ini
+# Default — SQLite. Both services keep their data under /data inside the
+# container. Mount a host volume if you want it to survive `docker rm`.
+DATABASE_URL=sqlite:/data/portal.db
+
+# PostgreSQL — recommended for multi-node deploys. Same URL for both
+# services, just change the database name per service.
+# Set this on the registry container:   postgres://nexus:secret@db:5432/nexus_registry
+# Set this on the portal container:     postgres://nexus:secret@db:5432/nexus_portal
+
+# MySQL / MariaDB — same shape with `mysql://` or `mariadb://`.
+```
+
+When you switch off SQLite you do not need a `/data` mount on either
+service. See [reference: environment](../reference/environment.md) for the
+full env-var matrix.
 
 ## 3. Start the stack
 

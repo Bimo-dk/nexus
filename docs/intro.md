@@ -78,6 +78,10 @@ createApp(App).mount('#app');
 
 That is the whole file. The decorator on the entry component (`@NexusComponent`) takes care of the catalog metadata. The Vite plugin (`nexusVite`) emits `remoteEntry.json`. Everything else — registration, route propagation, gateway proxy, cache headers, fallback — is the platform doing its job.
 
+### Cross-framework components
+
+A Vue host loads a React component; a React host loads a Vue component. The convention is one exported function per remote — `mount(el: HTMLElement): () => void`. The remote brings its own React or Vue or Angular runtime inside the host's div. No runtime sharing. No `useState` dispatcher bug. The full pattern, including the legacy fallback for same-framework loading, is in the [cross-framework guide](guides/guide-cross-framework.md).
+
 ---
 
 ## Quick start in any of the three frameworks
@@ -298,7 +302,11 @@ graph TB
   </div>
   <div className="nexus-card">
     <h3>Component catalog</h3>
-    <p>@NexusComponent (or the catalog field on nexusVite) publishes a discoverable component inventory.</p>
+    <p>@NexusComponent (or the catalog field on nexusVite) publishes a discoverable component inventory. The portal renders it as a sortable table with per-component detail pages, copy-able snippets for every host framework, and a live preview.</p>
+  </div>
+  <div className="nexus-card">
+    <h3>Cross-framework via BYOF</h3>
+    <p>Every remote ships a tiny <code>mount(el)</code> function. A Vue host loads a React component without sharing React. A React host loads a Vue component without sharing Vue. See the <a href="guides/guide-cross-framework">cross-framework guide</a>.</p>
   </div>
   <div className="nexus-card">
     <h3>CLI scaffolding</h3>
