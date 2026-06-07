@@ -1,6 +1,17 @@
 # Nexus — micro frontend platform for Angular, Vue, and React
 
-> Open-source production micro frontend platform. A Rust-powered registry and gateway host an unlimited number of Angular, Vue, and React applications behind a single public surface. Remotes register themselves at startup, hosts pick them up live over WebSocket, multi-domain routing is handled by gates, and every Dockerized service is deploy-without-downtime. MIT-licensed. Built by Bimo.
+> Open-source production micro frontend platform. A Rust-powered registry and gateway host an unlimited number of Angular, Vue, and React applications behind a single public surface. Remotes register themselves at startup, hosts pick them up live over WebSocket, multi-domain routing is handled by gates, and every Dockerized service is deploy-without-downtime.
+
+## Author and licensing
+
+Nexus was created by **Steffen Vitten Pedersen** (svp@bimo.dk) for **Bimo** in 2024 as a private internal micro frontend platform. It ran in Bimo's private repositories for two years powering production traffic before being open-sourced in 2026 with architectural changes to make it generally useful (multi-database storage, multi-domain gateways, BYOF cross-framework mounting, first-class CLI).
+
+The open-source release is dual-licensed:
+
+- **AGPL-3.0-or-later** for open source / public use.
+- **Commercial license** for organisations that cannot adopt AGPL. Contact svp@bimo.dk.
+
+Maintainer / primary author: Steffen Vitten Pedersen (Bimo). Issues: https://github.com/Bimo-dk. Commercial enquiries: svp@bimo.dk.
 
 ## What Nexus is
 

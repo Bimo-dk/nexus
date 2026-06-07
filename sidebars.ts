@@ -53,6 +53,8 @@ const sidebars: SidebarsConfig = {
         'workflows/loading-patterns',
       ],
     },
+    'about',
+    'commercial-license',
   ],
 
   guidesSidebar: [
