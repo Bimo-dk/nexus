@@ -25,6 +25,29 @@ keywords:
 
 End users only ever reach `:8668` (the application). Operators reach `:8669` (the admin portal) from inside the trust boundary — same docker network, corporate LAN, or VPN. Every other service is reached through the gateway's reverse proxy or service-to-service inside the cluster.
 
+## Health endpoints
+
+Every Nexus service ships a JSON `/health` endpoint so an upstream load balancer or container orchestrator can probe it. The endpoints below are stable across versions — wire them straight into your readiness / liveness probes.
+
+| Service | Path | Public-reachable? |
+|---|---|---|
+| `gateway` | `GET /health` on port 8668 | yes — bound on the public port |
+| `gateway` | `GET /metrics` on port 8668 (Prometheus text) | yes |
+| `registry` | `GET /health` on port 8670 | no — internal only; reach it through the gateway as `GET /api/health` (no auth required for the public health endpoint) |
+| `portal` | `GET /health` on port 8669 (or 80 in-container) | inside the trust boundary |
+| `host-*` | `GET /health` on port 80 | no — internal only |
+| `remote-*` | `GET /health` on port 80 | no — internal only |
+
+All five return `200 OK` with a small JSON body when healthy. Examples:
+
+```bash
+curl -fsS http://localhost:8668/health     # gateway
+curl -fsS http://localhost:8669/health     # portal
+curl -fsS http://localhost:8668/api/health # registry through gateway
+```
+
+For deeper probing, the registry exposes a system-level aggregate at `GET /api/system/health` (requires `X-Nexus-Token`) that includes the per-remote health snapshot the portal renders on the System Health page.
+
 ### Why this is the trust boundary
 
 Only the gateway is exposed to the public internet. The portal is browser-accessible but the host you reach it from must be inside the trust boundary (operator workstation on VPN / LAN, jump host, etc.) — never the open internet. The registry, hosts, and remotes are reachable solely from inside the cluster. This is the security model — see [reference: security — Network trust boundary](../reference/security.md#network-trust-boundary) for the full picture. The short version: `NEXUS_TOKEN` is a machine-to-machine secret that never crosses the public-internet boundary in a healthy deployment, which is why a single shared symmetric token is the right shape for this topology.
@@ -44,6 +67,7 @@ Dev-server ports below are conventions used by the framework templates — they 
 |---|---|
 | `nexus-host-template` (Angular) | 8667 |
 | `nexus-host-template-vue` (Vue) | 8667 |
+| `nexus-host-template-react` (React) | 8667 |
 | `nexus-portal` | 8669 |
 | `nexus-remote-templat` (Angular) | 8700 |
 | `nexus-remote-templat-vue` (Vue) | 8701 |
