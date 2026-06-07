@@ -19,24 +19,9 @@ Code: `nexus-portal/`. Stack: Angular 19 standalone components and Angular Mater
 
 ## Layout
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│ Sidebar           │ Top bar (registry status, theme, user)  │
-│                   ├─────────────────────────────────────────┤
-│ • Overview        │                                         │
-│ • Hosts*          │            Active page                  │
-│ • Gates*          │                                         │
-│ • Remotes         │                                         │
-│ • Catalog         │                                         │
-│ • Protection*     │                                         │
-│ • Config*         │                                         │
-│ • Logs*           │                                         │
-│ • System*         │                                         │
-│ • Users*          │                                         │
-└───────────────────┴─────────────────────────────────────────┘
+A fixed left sidebar groups navigation by area (Observability, Remotes, Platform, Security, Admin). The top bar shows registry status, theme toggle, and the logged-in user. Pages marked with `*` are admin-only — they don't appear in the developer's sidebar at all.
 
-`*` marks pages that only `admin` users can see.
-```
+![Portal Component Catalog page showing the layout](/img/dev-flow/portal-catalog.png)
 
 The compact developer-oriented design follows the Datadog / Grafana aesthetic: dense rows, monospace numerals, small typography, sparklines where relevant, no chrome that isn't load-bearing.
 
@@ -50,17 +35,29 @@ A single-glance status board. Counts (hosts, gates, remotes), registry uptime, W
 
 CRUD for shell applications. Create with name, URL, framework (angular / vue / react), `remoteEntry`, `exposedModule`. Each row shows the number of gates pointing to it. Delete is blocked while any gate references the host.
 
+![Hosts page](/img/dev-flow/portal-hosts.png)
+
 ### Gates
 
 CRUD for public entry points. A gate is `(name, domain, hostId, enabled)`. The portal validates that the domain is reachable from the gateway when you save.
+
+![Gates page](/img/dev-flow/portal-gates.png)
 
 ### Remotes
 
 CRUD for micro frontends. Each row shows visibility (`global` or `host:<id>`), enabled state, last health check, current `upstreamUrl`. Toggle a remote off and the gateway hot-removes its route in milliseconds; toggle it on and the route reappears.
 
+![Remotes page](/img/dev-flow/portal-remotes.png)
+
 ### Catalog
 
-Aggregated view of every `@NexusComponent` (Angular) or `catalog` entry (Vue/React `nexusVite`) across every registered remote. Filter by category, tag, framework, or input shape. Click an entry to copy the corresponding `<nexus-component>` or `useNexusComponent` snippet for your host's framework.
+Aggregated view of every `@NexusComponent` (Angular) or `defineNexusComponent` (Vue/React) across every registered remote. Filter by category, tag, framework, or input shape. Click an entry to see a code snippet per host framework plus a live preview.
+
+![Component Catalog table view](/img/dev-flow/portal-catalog.png)
+
+Clicking a row opens the detail page with four framework-specific code snippets (Angular / Vue / React) and a live preview:
+
+![Component Catalog detail view](/img/dev-flow/portal-catalog-detail.png)
 
 ### Protection
 
