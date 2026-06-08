@@ -340,4 +340,6 @@ More services land here as the rest of the workspace is documented.
 
 ## License and source
 
-MIT-licensed. Source code: https://github.com/Bimo-dk/nexus. Built and maintained by [Bimo](https://bimo.dk).
+Open-source release: **GNU Affero General Public License v3.0 or any later version** (AGPL-3.0-or-later). A separate [commercial license](commercial-license.md) is available for organisations that cannot adopt AGPL — contact [svp@bimo.dk](mailto:svp@bimo.dk).
+
+Source code: https://github.com/Bimo-dk/nexus. Created by **Steffen Vitten Pedersen** at [Bimo](https://bimo.dk) in 2024; open-sourced in 2026. See [About Nexus](about.md) for the full history.

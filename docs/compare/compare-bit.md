@@ -30,7 +30,7 @@ If you want a managed, polished component-sharing experience and a SaaS provider
 
 | You need | Bit (OSS / self-hosted) | Nexus |
 |---|---|---|
-| Fully open-source platform | partial — core is open, bit.cloud is commercial | yes (MIT, all components) |
+| Fully open-source platform | partial — core is open, bit.cloud is commercial | yes (AGPL-3.0, all components; commercial license available) |
 | Self-hosted by default | possible but more complex | yes — `docker compose up` |
 | Multi-framework runtime federation | yes (components) | yes (remotes + components) |
 | Dynamic gateway with hot routing | not the focus | yes |
@@ -82,7 +82,7 @@ You can absolutely use Bit *inside* a Nexus remote. The remote ships components 
 |  | Bit | Nexus |
 |---|---|---|
 | Type | component platform | runtime platform |
-| License | core OSS, SaaS commercial | MIT |
+| License | core OSS, SaaS commercial | AGPL-3.0-or-later + commercial |
 | Hosting | SaaS (or self-host with effort) | self-host (compose / k8s) |
 | Granularity | component | remote (+ component catalog) |
 | Gateway | n/a | Rust, hot route swap |

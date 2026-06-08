@@ -117,7 +117,7 @@ You can run an Nx monorepo as one Nexus host. The monorepo builds the host appli
 | Gateway | DIY | Rust |
 | Multi-domain | DIY | Gates |
 | Multi-framework | possible | first-class |
-| Vendor lock-in | Nx tooling (OSS) | none (MIT) |
+| Vendor lock-in | Nx tooling (OSS) | none (AGPL-3.0 + commercial option) |
 
 ## Next
 
