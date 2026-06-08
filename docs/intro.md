@@ -3,7 +3,7 @@ id: intro
 title: Nexus — micro frontends for Angular, Vue, and React
 slug: /
 sidebar_position: 1
-description: Nexus is the open-source micro frontend platform for Angular, Vue, and React. Rust-powered registry and gateway, dynamic remote loading, multi-domain gates, and zero-downtime deploys.
+description: Nexus 1.0 is the open-source micro frontend platform for Angular, Vue, and React. Rust-powered registry and gateway, dynamic remote loading, multi-domain gates, zero-downtime deploys. Created by Steffen Vitten Pedersen at Bimo, open-sourced under AGPL-3.0-or-later with a commercial license option.
 keywords:
   - micro frontend
   - micro frontend platform
@@ -22,6 +22,16 @@ keywords:
 
 > **The production micro frontend platform for Angular, Vue, and React.**
 > One Rust-powered registry. One Rust-powered gateway. Unlimited applications. Dual-licensed AGPL-3.0-or-later or commercial.
+
+:::tip Nexus 1.0 is here
+
+The first stable release shipped today (2026-06-08). Every `@bimo-dk/*` npm package, the gateway, registry, portal, proxy, base image, CLI, and the six host / remote scaffolds are all tagged `v1.0.0`. The CLI surface — `bnx init`, `bnx generate host`, `bnx generate remote`, `bnx generate component`, `bnx dev --env <stack>`, `bnx publish` — is now stable and follows semver from here.
+
+→ See [About Nexus](about.md) for the story behind the project.
+→ See [Local dev mode — step by step](workflows/dev-mode.md) for the full walkthrough from empty directory to published remote.
+→ See per-repo CHANGELOG.md for the detailed 1.0 changes.
+
+:::
 
 Every other micro frontend tool solves one half of the problem. The build-time half (Module Federation) or the routing half (single-spa) or the components half (Bit). Nexus solves the *complete* problem: a Rust registry that hosts, gates and remotes register against; a Rust gateway that builds its proxy table from that registry at runtime; an admin portal; built-in DDoS protection; and adapter packages so an Angular host can load a Vue remote and a React remote in the same browser tab.
 
