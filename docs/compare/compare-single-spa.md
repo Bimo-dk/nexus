@@ -108,7 +108,7 @@ The two can coexist. A single-spa root config can load a remote that's registere
 | Protection | DIY | seven layers |
 | Dev mode | DIY | `bnx dev` |
 | Catalog | DIY | `@NexusComponent` |
-| Vendor lock-in | none | none (MIT) |
+| Vendor lock-in | none | none (AGPL-3.0 + commercial option) |
 
 ## Next
 

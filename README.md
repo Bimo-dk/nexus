@@ -1,7 +1,7 @@
 # Nexus
 
 > **The production micro frontend platform for Angular, Vue, and React.**
-> One Rust-powered registry. One Rust-powered gateway. Unlimited applications. MIT-licensed.
+> One Rust-powered registry. One Rust-powered gateway. Unlimited applications. Dual-licensed AGPL-3.0-or-later or commercial.
 
 Nexus solves the operational layer that Module Federation and Native Federation never touched: a persistent Rust registry of hosts, gates, and remotes; a Rust gateway that builds its proxy table from that registry at runtime; an admin portal; built-in DDoS protection; and adapter packages so an Angular host can load a Vue remote and a React remote in the same browser tab.
 
@@ -137,8 +137,10 @@ The workflow auto-detects the GitHub org and repo name, so no config edit is nee
 
 ## About
 
-Nexus is developed and maintained by **Bimo**. Built to give multi-team products an honest path to micro frontends — across Angular, Vue, and React, with no proprietary runtime, no SaaS dependency, no lock-in.
+Nexus is created by **Steffen Vitten Pedersen** ([svp@bimo.dk](mailto:svp@bimo.dk)) and developed inside **Bimo**. Built to give multi-team products an honest path to micro frontends — across Angular, Vue, and React, with no proprietary runtime, no SaaS dependency, no lock-in.
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+**GNU Affero General Public License v3.0 or any later version** (AGPL-3.0-or-later) — see [LICENSE](./LICENSE).
+
+A commercial license is available for organisations that cannot adopt AGPL. See [nexus.bimo.dk/commercial-license](https://nexus.bimo.dk/commercial-license) or contact [svp@bimo.dk](mailto:svp@bimo.dk).

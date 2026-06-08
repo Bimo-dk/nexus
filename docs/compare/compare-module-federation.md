@@ -51,7 +51,7 @@ If you adopt Module Federation, you still build all of the above. Most teams do 
 ### Where Module Federation wins
 
 - **Smaller scope to adopt.** You add a webpack plugin and ship.
-- **No platform vendor lock-in.** Even though Nexus is MIT, you're adopting an opinionated layout (gates, hosts, remotes, three frameworks).
+- **No platform vendor lock-in.** Even though Nexus is open source (AGPL-3.0-or-later or commercial), you're adopting an opinionated layout (gates, hosts, remotes, three frameworks).
 - **Granular shared module control.** Module Federation's `shared` config is more expressive than what Nexus exposes through the adapters today.
 
 ### Where Nexus wins
@@ -93,7 +93,7 @@ Worth noting: Nexus uses [Native Federation](https://www.npmjs.com/package/@angu
 | Protection | DIY | seven layers, hot-configurable |
 | Cross-team catalog | DIY | included |
 | Dev mode | DIY | `bnx dev` |
-| Vendor lock-in | none | none (MIT) |
+| Vendor lock-in | none | none (AGPL-3.0 + commercial option) |
 
 ## Next
 
